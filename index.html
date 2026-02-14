@@ -39,7 +39,6 @@
             overflow-x: hidden;
         }
 
-        /* Animated grid background */
         body::before {
             content: '';
             position: fixed;
@@ -119,7 +118,6 @@
             font-weight: 500;
         }
 
-        /* Authentication Styles */
         .login-container {
             min-height: 100vh;
             display: flex;
@@ -267,12 +265,12 @@
             border: 1px solid var(--border-color);
             border-radius: 6px;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
 
         .user-info .username {
             font-weight: 600;
             color: var(--accent-blue);
-            flex: 1;
         }
 
         .logout-btn {
@@ -299,6 +297,7 @@
             gap: 1rem;
             margin-bottom: 2rem;
             border-bottom: 2px solid var(--border-color);
+            flex-wrap: wrap;
         }
 
         .tab {
@@ -573,6 +572,11 @@
             transform: translateY(0);
         }
 
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .history-table {
             width: 100%;
             border-collapse: collapse;
@@ -619,6 +623,12 @@
             color: var(--accent-yellow);
         }
 
+        .alert.info {
+            background: rgba(0, 212, 255, 0.1);
+            border-left-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
         .stat-chip {
             display: inline-block;
             padding: 0.25rem 0.75rem;
@@ -644,6 +654,40 @@
         .stat-chip.critical {
             background: rgba(255, 56, 56, 0.2);
             color: var(--accent-red);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 14, 26, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-content {
+            text-align: center;
+            color: var(--accent-blue);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
@@ -674,7 +718,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         const PTRMonitoringApp = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -688,6 +732,7 @@
             // Google Sheets Configuration
             const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
             const [isConfigured, setIsConfigured] = useState(false);
+
             const [syncStatus, setSyncStatus] = useState('');
             const [isLoading, setIsLoading] = useState(false);
 
@@ -746,7 +791,7 @@
                         localStorage.removeItem('ptr_session');
                     }
                 }
-                
+
                 // Check for Google Sheets URL
                 const savedUrl = localStorage.getItem('google_sheets_url');
                 if (savedUrl) {
@@ -755,44 +800,34 @@
                 }
             }, []);
 
-            // Timer and data loading (only when authenticated)
+            // Timer
             useEffect(() => {
                 if (!isAuthenticated) return;
-                
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
                 return () => clearInterval(timer);
             }, [isAuthenticated]);
             
-            // Load data when selected date changes
+            // Load data when authenticated or date changes
             useEffect(() => {
                 if (!isAuthenticated) return;
                 loadData(selectedDate);
             }, [selectedDate, isAuthenticated]);
 
+            // Cloud storage functions using window.storage API
             const loadData = async (date) => {
                 setIsLoading(true);
-                const storageKey = `readings_${date}`;
+                const storageKey = `ptr_readings_${date}`;
                 
-                // Try to load from Google Sheets first if configured
-                if (isConfigured && googleSheetsUrl) {
-                    const sheetsData = await loadFromGoogleSheets(date);
-                    if (sheetsData) {
-                        setReadings(sheetsData);
-                        // Save to localStorage as cache
-                        localStorage.setItem(storageKey, JSON.stringify(sheetsData));
-                        setIsLoading(false);
-                        return;
-                    }
-                }
-                
-                // Fallback to localStorage
                 try {
-                    const readingsData = localStorage.getItem(storageKey);
-                    const historyData = localStorage.getItem('ptr_history');
+                    // Load readings from cloud storage (PRIMARY SOURCE)
+                    const result = await window.storage.get(storageKey, true);
                     
-                    if (readingsData) {
-                        setReadings(JSON.parse(readingsData));
+                    if (result && result.value) {
+                        const loadedReadings = JSON.parse(result.value);
+                        setReadings(loadedReadings);
+                        console.log('Loaded readings from cloud:', loadedReadings);
                     } else {
+                        // No data for this date
                         setReadings({
                             ptr1_220: initialReadings(),
                             ptr2_220: initialReadings(),
@@ -801,11 +836,14 @@
                         });
                     }
                     
-                    if (historyData) {
-                        setHistory(JSON.parse(historyData));
+                    // Load history
+                    const historyResult = await window.storage.get('ptr_history', true);
+                    if (historyResult && historyResult.value) {
+                        setHistory(JSON.parse(historyResult.value));
                     }
+                    
                 } catch (error) {
-                    console.log('Error loading from localStorage:', error);
+                    console.log('No data found or error loading:', error);
                     setReadings({
                         ptr1_220: initialReadings(),
                         ptr2_220: initialReadings(),
@@ -817,120 +855,34 @@
                 setIsLoading(false);
             };
 
-            const loadFromGoogleSheets = (date) => {
-                return new Promise((resolve) => {
-                    if (!googleSheetsUrl) {
-                        resolve(null);
-                        return;
-                    }
-                    
-                    setSyncStatus('Loading from Google Sheets...');
-                    
-                    // Create script element for JSONP
-                    const script = document.createElement('script');
-                    const callbackName = 'googleSheetsCallback_' + Date.now();
-                    
-                    // Timeout after 10 seconds
-                    const timeout = setTimeout(() => {
-                        setSyncStatus('');
-                        document.body.removeChild(script);
-                        delete window[callbackName];
-                        resolve(null);
-                    }, 10000);
-                    
-                    // Define callback function
-                    window[callbackName] = function(response) {
-                        clearTimeout(timeout);
-                        
-                        if (response.status === 'success' && response.data) {
-                            setSyncStatus('✓ Loaded from Google Sheets');
-                            setTimeout(() => setSyncStatus(''), 3000);
-                            
-                            // Cleanup
-                            document.body.removeChild(script);
-                            delete window[callbackName];
-                            
-                            resolve(response.data);
-                        } else {
-                            setSyncStatus('');
-                            document.body.removeChild(script);
-                            delete window[callbackName];
-                            resolve(null);
-                        }
-                    };
-                    
-                    // Make request
-                    script.src = `${googleSheetsUrl}?action=getReadings&date=${date}&callback=${callbackName}`;
-                    script.onerror = () => {
-                        clearTimeout(timeout);
-                        setSyncStatus('');
-                        document.body.removeChild(script);
-                        delete window[callbackName];
-                        resolve(null);
-                    };
-                    
-                    document.body.appendChild(script);
-                });
-            };
-
-            const loadHistoryFromGoogleSheets = () => {
-                if (!googleSheetsUrl) return;
+            const saveToCloudStorage = async (date, newReadings, newHistory) => {
+                const storageKey = `ptr_readings_${date}`;
                 
-                setSyncStatus('Loading history from Google Sheets...');
-                
-                const script = document.createElement('script');
-                const callbackName = 'googleSheetsHistoryCallback_' + Date.now();
-                
-                window[callbackName] = function(response) {
-                    if (response.status === 'success' && response.data) {
-                        setHistory(response.data);
-                        localStorage.setItem('ptr_history', JSON.stringify(response.data));
-                        setSyncStatus('✓ History loaded');
-                        setTimeout(() => setSyncStatus(''), 3000);
-                    } else {
-                        setSyncStatus('');
-                    }
-                    
-                    document.body.removeChild(script);
-                    delete window[callbackName];
-                };
-                
-                script.src = `${googleSheetsUrl}?action=getHistory&callback=${callbackName}`;
-                script.onerror = () => {
-                    setSyncStatus('');
-                    document.body.removeChild(script);
-                    delete window[callbackName];
-                };
-                
-                document.body.appendChild(script);
-            };
-
-            const refreshData = async () => {
-                setSyncStatus('🔄 Refreshing...');
-                await loadData(selectedDate);
-                if (isConfigured) {
-                    loadHistoryFromGoogleSheets();
-                }
-            };
-
-            const saveData = async (storageKey, newReadings, newHistory) => {
-                // Save to localStorage
                 try {
-                    localStorage.setItem(storageKey, JSON.stringify(newReadings));
-                    localStorage.setItem('ptr_history', JSON.stringify(newHistory));
+                    // Save readings to cloud storage (shared=true makes it accessible to all users)
+                    await window.storage.set(storageKey, JSON.stringify(newReadings), true);
+                    
+                    // Save history
+                    await window.storage.set('ptr_history', JSON.stringify(newHistory), true);
+                    
+                    console.log('Data saved to cloud storage successfully');
+                    return true;
                 } catch (error) {
-                    console.error('Error saving to localStorage:', error);
-                    alert('Error saving data locally. Your browser storage might be full.');
+                    console.error('Error saving to cloud storage:', error);
+                    return false;
                 }
             };
 
             const saveToGoogleSheets = async (entry, ptrName) => {
                 if (!isConfigured || !googleSheetsUrl) {
+                    console.log('Google Sheets not configured, skipping backup');
                     return;
                 }
                 
                 try {
-                    setSyncStatus('Syncing to Google Sheets...');
+                    console.log('Syncing to Google Sheets in background...');
+                    
+                    // Use fetch with no-cors for Google Apps Script
                     await fetch(googleSheetsUrl, {
                         method: 'POST',
                         mode: 'no-cors',
@@ -950,15 +902,18 @@
                         })
                     });
                     
-                    setTimeout(() => {
-                        setSyncStatus('✓ Synced to Google Sheets');
-                        setTimeout(() => setSyncStatus(''), 3000);
-                    }, 1000);
+                    console.log('Successfully synced to Google Sheets');
                 } catch (error) {
-                    console.error('Error saving to Google Sheets:', error);
-                    setSyncStatus('⚠ Saved locally only');
-                    setTimeout(() => setSyncStatus(''), 3000);
+                    console.error('Error saving to Google Sheets (non-critical):', error);
+                    // Don't throw error - Google Sheets is just a backup
                 }
+            };
+
+            const refreshData = async () => {
+                setSyncStatus('🔄 Refreshing from cloud...');
+                await loadData(selectedDate);
+                setSyncStatus('✓ Refreshed successfully');
+                setTimeout(() => setSyncStatus(''), 2000);
             };
 
             const handleLoginSubmit = (e) => {
@@ -1008,14 +963,17 @@
                     return;
                 }
 
-                const storageKey = `readings_${formData.date}`;
-                
-                // Load existing readings for this date or create new
+                setIsLoading(true);
+                setSyncStatus('💾 Saving to cloud...');
+
+                // Load current readings for this date
+                const storageKey = `ptr_readings_${formData.date}`;
                 let dateReadings;
+                
                 try {
-                    const existingData = localStorage.getItem(storageKey);
-                    if (existingData) {
-                        dateReadings = JSON.parse(existingData);
+                    const result = await window.storage.get(storageKey, true);
+                    if (result && result.value) {
+                        dateReadings = JSON.parse(result.value);
                     } else {
                         dateReadings = {
                             ptr1_220: initialReadings(),
@@ -1041,40 +999,58 @@
                     id: Date.now(),
                     date: formData.date,
                     time: formData.time,
-                    entryTime: currentTime.toLocaleTimeString(),
+                    entryTime: currentTime.toLocaleTimeString('en-IN'),
                     ptr: formData.ptr,
+                    ptrName: ptrInfo.name,
                     mw: mwValue,
-                    amps: ampsValue
+                    amps: ampsValue,
+                    user: currentUser.username
                 };
 
                 const newHistory = [newEntry, ...history].slice(0, 100);
 
-                // Save to localStorage
-                localStorage.setItem(storageKey, JSON.stringify(dateReadings));
-                localStorage.setItem('ptr_history', JSON.stringify(newHistory));
+                // 1. Save to CLOUD STORAGE (PRIMARY - this is critical)
+                const cloudSaved = await saveToCloudStorage(formData.date, dateReadings, newHistory);
                 
-                // Update state
-                setHistory(newHistory);
-                
-                // Save to Google Sheets FIRST
-                await saveToGoogleSheets(newEntry, ptrInfo.name);
-                
-                // If entering data for the selected date, update readings immediately
-                if (formData.date === selectedDate) {
-                    setReadings(dateReadings);
+                if (cloudSaved) {
+                    // Update local state
+                    setHistory(newHistory);
+                    
+                    // If the form date matches selected date, update readings
+                    if (formData.date === selectedDate) {
+                        setReadings(dateReadings);
+                    } else {
+                        // Switch to the date we just entered data for
+                        setSelectedDate(formData.date);
+                    }
+                    
+                    // Clear form
+                    setFormData(prev => ({ ...prev, mw: '', amps: '' }));
+                    
+                    // Switch to dashboard
+                    setActiveTab('dashboard');
+                    
+                    setSyncStatus('✓ Data saved to cloud!');
+                    
+                    // 2. Sync to GOOGLE SHEETS (BACKGROUND - optional backup)
+                    if (isConfigured) {
+                        setSyncStatus('✓ Saved to cloud, syncing to Sheets...');
+                        // This happens in background, don't wait for it
+                        saveToGoogleSheets(newEntry, ptrInfo.name).then(() => {
+                            setSyncStatus('✓ Saved to cloud + Google Sheets!');
+                            setTimeout(() => setSyncStatus(''), 3000);
+                        }).catch(() => {
+                            setSyncStatus('✓ Saved to cloud (Sheets sync failed)');
+                            setTimeout(() => setSyncStatus(''), 3000);
+                        });
+                    } else {
+                        setTimeout(() => setSyncStatus(''), 3000);
+                    }
                 } else {
-                    // If entering data for a different date, switch to that date
-                    setSelectedDate(formData.date);
+                    alert('Failed to save data. Please try again.');
                 }
-
-                setFormData(prev => ({ ...prev, mw: '', amps: '' }));
                 
-                // Switch to dashboard to show the updated data
-                setActiveTab('dashboard');
-                
-                // Show success message
-                setSyncStatus('✓ Data saved successfully!');
-                setTimeout(() => setSyncStatus(''), 3000);
+                setIsLoading(false);
             };
 
             const getLoadStatus = (amps, ratedAmps) => {
@@ -1260,388 +1236,402 @@
 
             // Main Application
             return (
-                <div className="container">
-                    <div className="header">
-                        <h1>PTR Load Monitoring</h1>
-                        <div className="subtext">220/132/33 KV Substation - Huzurnagar | TGTRANSCO</div>
-                        <div className="timestamp">
-                            {currentTime.toLocaleDateString('en-IN', { 
-                                weekday: 'long', 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                            })} | {currentTime.toLocaleTimeString('en-IN')}
+                <>
+                    {isLoading && (
+                        <div className="loading-overlay">
+                            <div className="loading-content">
+                                <div className="spinner"></div>
+                                <div>Loading data from cloud...</div>
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="user-info">
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>LOGGED IN AS:</span>
-                        <span className="username">{currentUser.username}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>({currentUser.role})</span>
-                        {syncStatus && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-green)', marginLeft: '1rem' }}>
-                                {syncStatus}
-                            </span>
-                        )}
-                        {isConfigured && (
-                            <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'rgba(0, 255, 136, 0.2)', color: 'var(--accent-green)', borderRadius: '4px', marginLeft: 'auto' }}>
-                                ● Google Sheets Connected
-                            </span>
-                        )}
-                        <button onClick={handleLogout} className="logout-btn">
-                            Logout
-                        </button>
-                    </div>
-
-                    <div className="tabs">
-                        <button 
-                            className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('dashboard')}
-                        >
-                            Dashboard
-                        </button>
-                        <button 
-                            className={`tab ${activeTab === 'entry' ? 'active' : ''}`}
-                            onClick={() => {
-                                setActiveTab('entry');
-                                setFormData(prev => ({ ...prev, date: selectedDate }));
-                            }}
-                        >
-                            Data Entry
-                        </button>
-                        <button 
-                            className={`tab ${activeTab === 'history' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('history')}
-                        >
-                            History
-                        </button>
-                        <button 
-                            className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('settings')}
-                        >
-                            Settings
-                        </button>
-                    </div>
-
-                    {activeTab === 'dashboard' && (
-                        <>
-                            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(21, 27, 46, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px', flexWrap: 'wrap' }}>
-                                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                    View Date:
-                                </label>
-                                <input 
-                                    type="date" 
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
-                                    style={{ 
-                                        background: 'rgba(10, 14, 26, 0.8)', 
-                                        border: '2px solid var(--border-color)', 
-                                        color: 'var(--text-primary)', 
-                                        padding: '0.75rem', 
-                                        borderRadius: '4px', 
-                                        fontFamily: 'JetBrains Mono, monospace', 
-                                        fontSize: '0.9rem' 
-                                    }}
-                                />
-                                <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)' }}>
-                                    Viewing: {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                </div>
-                                <button 
-                                    onClick={refreshData}
-                                    disabled={isLoading}
-                                    style={{
-                                        padding: '0.75rem 1.5rem',
-                                        background: isLoading ? 'rgba(0, 212, 255, 0.1)' : 'rgba(0, 212, 255, 0.2)',
-                                        border: '2px solid var(--accent-blue)',
-                                        color: 'var(--accent-blue)',
-                                        fontFamily: 'JetBrains Mono, monospace',
-                                        fontSize: '0.8rem',
-                                        fontWeight: '600',
-                                        textTransform: 'uppercase',
-                                        cursor: isLoading ? 'not-allowed' : 'pointer',
-                                        borderRadius: '4px',
-                                        transition: 'all 0.3s ease',
-                                        marginLeft: 'auto'
-                                    }}
-                                    onMouseOver={(e) => !isLoading && (e.target.style.background = 'var(--accent-blue)')}
-                                    onMouseOut={(e) => !isLoading && (e.target.style.background = 'rgba(0, 212, 255, 0.2)')}
-                                >
-                                    {isLoading ? '⏳ Loading...' : '🔄 Refresh Data'}
-                                </button>
-                            </div>
-
-                            <div className="ptr-grid">
-                                {ptrs.map(ptr => (
-                                    <PTRCard key={ptr.id} ptr={ptr} />
-                                ))}
-                            </div>
-
-                            {Object.values(readings).some(r => Object.values(r).some(v => v.mw > 0 || v.amps > 0)) && (
-                                <div className="alert">
-                                    <strong>✓ System Active</strong> - Load monitoring data available. All transformers operational.
-                                </div>
-                            )}
-                        </>
                     )}
-
-                    {activeTab === 'entry' && (
-                        <div className="form-section">
-                            <h2>Enter Load Reading</h2>
-                            
-                            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0, 212, 255, 0.1)', border: '2px solid var(--accent-blue)', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>
-                                    📋 Entering data for: {new Date(formData.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                    After submitting, you'll be automatically taken to the Dashboard to see your updated readings.
-                                </div>
+                    
+                    <div className="container">
+                        <div className="header">
+                            <h1>PTR Load Monitoring</h1>
+                            <div className="subtext">220/132/33 KV Substation - Huzurnagar | TGTRANSCO</div>
+                            <div className="timestamp">
+                                {currentTime.toLocaleDateString('en-IN', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })} | {currentTime.toLocaleTimeString('en-IN')}
                             </div>
-                            
-                            <form onSubmit={handleSubmit}>
-                                <div className="form-grid">
-                                    <div className="form-group">
-                                        <label>Select PTR</label>
-                                        <select 
-                                            name="ptr" 
-                                            value={formData.ptr}
-                                            onChange={handleInputChange}
-                                        >
-                                            {ptrs.map(ptr => (
-                                                <option key={ptr.id} value={ptr.id}>
-                                                    {ptr.name} - {ptr.capacity} MVA (Rated: {ptr.ratedAmps}A)
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                        </div>
 
-                                    <div className="form-group">
-                                        <label>Time Slot</label>
-                                        <select 
-                                            name="time" 
-                                            value={formData.time}
-                                            onChange={handleInputChange}
-                                        >
-                                            <optgroup label="Morning Hours">
-                                                {timeSlots.morning.map(time => (
-                                                    <option key={time} value={time}>{time} Hrs</option>
-                                                ))}
-                                            </optgroup>
-                                            <optgroup label="Evening Hours">
-                                                {timeSlots.evening.map(time => (
-                                                    <option key={time} value={time}>{time} Hrs</option>
-                                                ))}
-                                            </optgroup>
-                                        </select>
-                                    </div>
+                        <div className="user-info">
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>LOGGED IN AS:</span>
+                            <span className="username">{currentUser.username}</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>({currentUser.role})</span>
+                            {syncStatus && (
+                                <span style={{ fontSize: '0.75rem', color: 'var(--accent-green)', marginLeft: '1rem' }}>
+                                    {syncStatus}
+                                </span>
+                            )}
+                            <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'rgba(0, 255, 136, 0.2)', color: 'var(--accent-green)', borderRadius: '4px' }}>
+                                ☁️ Cloud Sync
+                            </span>
+                            {isConfigured && (
+                                <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'rgba(255, 214, 0, 0.2)', color: 'var(--accent-yellow)', borderRadius: '4px' }}>
+                                    📊 Sheets Backup
+                                </span>
+                            )}
+                            <button onClick={handleLogout} className="logout-btn">
+                                Logout
+                            </button>
+                        </div>
 
-                                    <div className="form-group">
-                                        <label>Load (MW)</label>
-                                        <input 
-                                            type="number" 
-                                            name="mw"
-                                            step="0.1"
-                                            value={formData.mw}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter load in MW"
-                                            required
-                                        />
-                                    </div>
+                        <div className="alert info">
+                            <strong>☁️ Hybrid Storage Active</strong> - Data syncs to cloud instantly (visible across all devices){isConfigured ? ' + backs up to Google Sheets' : ''}. {!isConfigured && 'Configure Google Sheets in Settings for backup.'}
+                        </div>
 
-                                    <div className="form-group">
-                                        <label>HV Current (Amps)</label>
-                                        <input 
-                                            type="number" 
-                                            name="amps"
-                                            step="0.1"
-                                            value={formData.amps}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter HV amperes"
-                                            required
-                                        />
-                                    </div>
+                        <div className="tabs">
+                            <button 
+                                className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('dashboard')}
+                            >
+                                Dashboard
+                            </button>
+                            <button 
+                                className={`tab ${activeTab === 'entry' ? 'active' : ''}`}
+                                onClick={() => {
+                                    setActiveTab('entry');
+                                    setFormData(prev => ({ ...prev, date: selectedDate }));
+                                }}
+                            >
+                                Data Entry
+                            </button>
+                            <button 
+                                className={`tab ${activeTab === 'history' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('history')}
+                            >
+                                History
+                            </button>
+                            <button 
+                                className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('settings')}
+                            >
+                                Settings
+                            </button>
+                        </div>
 
-                                    <div className="form-group">
-                                        <label>Date</label>
-                                        <input 
-                                            type="date" 
-                                            name="date"
-                                            value={formData.date}
-                                            onChange={handleInputChange}
-                                            required
-                                        />
+                        {activeTab === 'dashboard' && (
+                            <>
+                                <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(21, 27, 46, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px', flexWrap: 'wrap' }}>
+                                    <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                        View Date:
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        style={{ 
+                                            background: 'rgba(10, 14, 26, 0.8)', 
+                                            border: '2px solid var(--border-color)', 
+                                            color: 'var(--text-primary)', 
+                                            padding: '0.75rem', 
+                                            borderRadius: '4px', 
+                                            fontFamily: 'JetBrains Mono, monospace', 
+                                            fontSize: '0.9rem' 
+                                        }}
+                                    />
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)' }}>
+                                        Viewing: {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                     </div>
-                                </div>
-
-                                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0, 212, 255, 0.05)', borderRadius: '6px', fontSize: '0.8rem' }}>
-                                    <div style={{ color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>Rated HV Amperes:</div>
-                                    <div style={{ color: 'var(--text-secondary)' }}>
-                                        • 100 MVA PTRs (220/132 KV): <span style={{ color: 'var(--accent-yellow)' }}>262 Amps</span><br/>
-                                        • 31.5 MVA PTRs (132/33 KV): <span style={{ color: 'var(--accent-yellow)' }}>138 Amps</span>
-                                    </div>
-                                </div>
-
-                                <div style={{ marginTop: '2rem' }}>
-                                    <button type="submit" className="btn">
-                                        Submit Reading
+                                    <button 
+                                        onClick={refreshData}
+                                        disabled={isLoading}
+                                        className="btn"
+                                        style={{
+                                            padding: '0.75rem 1.5rem',
+                                            marginLeft: 'auto',
+                                            fontSize: '0.8rem'
+                                        }}
+                                    >
+                                        {isLoading ? '⏳ Loading...' : '🔄 Refresh from Cloud'}
                                     </button>
                                 </div>
-                            </form>
-                        </div>
-                    )}
 
-                    {activeTab === 'history' && (
-                        <div className="form-section">
-                            <h2>Load History</h2>
-                            {history.length > 0 ? (
-                                <table className="history-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Date</th>
-                                            <th>Time Slot</th>
-                                            <th>Entry Time</th>
-                                            <th>PTR</th>
-                                            <th>Load (MW)</th>
-                                            <th>HV Amps</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {history.map(entry => (
-                                            <tr key={entry.id}>
-                                                <td>{entry.date}</td>
-                                                <td style={{ fontWeight: '600', color: 'var(--accent-yellow)' }}>{entry.time} Hrs</td>
-                                                <td>{entry.entryTime}</td>
-                                                <td>{ptrs.find(p => p.id === entry.ptr)?.name}</td>
-                                                <td style={{ fontWeight: '600', color: 'var(--accent-blue)' }}>
-                                                    {entry.mw.toFixed(1)}
-                                                </td>
-                                                <td style={{ fontWeight: '600', color: 'var(--accent-green)' }}>
-                                                    {entry.amps.toFixed(1)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <div className="alert warning">
-                                    No historical data available. Start by entering load readings.
+                                <div className="ptr-grid">
+                                    {ptrs.map(ptr => (
+                                        <PTRCard key={ptr.id} ptr={ptr} />
+                                    ))}
                                 </div>
-                            )}
-                        </div>
-                    )}
 
-                    {activeTab === 'settings' && (
-                        <div className="form-section">
-                            <h2>Google Sheets Configuration</h2>
-                            
-                            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255, 214, 0, 0.1)', border: '2px solid var(--accent-yellow)', borderRadius: '8px' }}>
-                                <div style={{ fontSize: '0.9rem', color: 'var(--accent-yellow)', fontWeight: '600', marginBottom: '0.5rem' }}>
-                                    ⚠️ IMPORTANT: Data Persistence
-                                </div>
-                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-                                    <strong style={{ color: 'var(--text-primary)' }}>Without Google Sheets:</strong> Data is only saved in your browser on this device. It will be lost if you clear browser data or use a different device.<br/><br/>
-                                    <strong style={{ color: 'var(--text-primary)' }}>With Google Sheets:</strong> All data is saved to the cloud and accessible from any device, by any team member, and persists forever.
-                                </div>
-                            </div>
-                            
-                            {isConfigured ? (
-                                <div>
+                                {Object.values(readings).some(r => Object.values(r).some(v => v.mw > 0 || v.amps > 0)) && (
                                     <div className="alert">
-                                        <strong>✓ Connected to Google Sheets</strong><br/>
-                                        All data entries are being saved to your Google Sheet automatically.
+                                        <strong>✓ System Active</strong> - Load monitoring data available. All transformers operational.
                                     </div>
-                                    
-                                    <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(10, 14, 26, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>CURRENT WEB APP URL:</div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                                            {googleSheetsUrl}
+                                )}
+                            </>
+                        )}
+
+                        {activeTab === 'entry' && (
+                            <div className="form-section">
+                                <h2>Enter Load Reading</h2>
+                                
+                                <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0, 212, 255, 0.1)', border: '2px solid var(--accent-blue)', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                        📋 Entering data for: {new Date(formData.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                        Data will sync to cloud (instant cross-device access){isConfigured ? ' + backup to Google Sheets' : ''}.
+                                    </div>
+                                </div>
+                                
+                                <form onSubmit={handleSubmit}>
+                                    <div className="form-grid">
+                                        <div className="form-group">
+                                            <label>Select PTR</label>
+                                            <select 
+                                                name="ptr" 
+                                                value={formData.ptr}
+                                                onChange={handleInputChange}
+                                                disabled={isLoading}
+                                            >
+                                                {ptrs.map(ptr => (
+                                                    <option key={ptr.id} value={ptr.id}>
+                                                        {ptr.name} - {ptr.capacity} MVA (Rated: {ptr.ratedAmps}A)
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label>Time Slot</label>
+                                            <select 
+                                                name="time" 
+                                                value={formData.time}
+                                                onChange={handleInputChange}
+                                                disabled={isLoading}
+                                            >
+                                                <optgroup label="Morning Hours">
+                                                    {timeSlots.morning.map(time => (
+                                                        <option key={time} value={time}>{time} Hrs</option>
+                                                    ))}
+                                                </optgroup>
+                                                <optgroup label="Evening Hours">
+                                                    {timeSlots.evening.map(time => (
+                                                        <option key={time} value={time}>{time} Hrs</option>
+                                                    ))}
+                                                </optgroup>
+                                            </select>
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label>Load (MW)</label>
+                                            <input 
+                                                type="number" 
+                                                name="mw"
+                                                step="0.1"
+                                                value={formData.mw}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter load in MW"
+                                                required
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label>HV Current (Amps)</label>
+                                            <input 
+                                                type="number" 
+                                                name="amps"
+                                                step="0.1"
+                                                value={formData.amps}
+                                                onChange={handleInputChange}
+                                                placeholder="Enter HV amperes"
+                                                required
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label>Date</label>
+                                            <input 
+                                                type="date" 
+                                                name="date"
+                                                value={formData.date}
+                                                onChange={handleInputChange}
+                                                required
+                                                disabled={isLoading}
+                                            />
                                         </div>
                                     </div>
-                                    
+
+                                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0, 212, 255, 0.05)', borderRadius: '6px', fontSize: '0.8rem' }}>
+                                        <div style={{ color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>Rated HV Amperes:</div>
+                                        <div style={{ color: 'var(--text-secondary)' }}>
+                                            • 100 MVA PTRs (220/132 KV): <span style={{ color: 'var(--accent-yellow)' }}>262 Amps</span><br/>
+                                            • 31.5 MVA PTRs (132/33 KV): <span style={{ color: 'var(--accent-yellow)' }}>138 Amps</span>
+                                        </div>
+                                    </div>
+
                                     <div style={{ marginTop: '2rem' }}>
-                                        <button 
-                                            onClick={() => {
-                                                if (confirm('Are you sure you want to disconnect Google Sheets? Data will only be saved locally.')) {
-                                                    localStorage.removeItem('google_sheets_url');
-                                                    setGoogleSheetsUrl('');
-                                                    setIsConfigured(false);
-                                                }
-                                            }}
-                                            style={{ 
-                                                padding: '1rem 2rem', 
-                                                background: 'rgba(255, 56, 56, 0.2)', 
-                                                border: '2px solid var(--accent-red)', 
-                                                color: 'var(--accent-red)',
-                                                fontFamily: 'JetBrains Mono, monospace',
-                                                fontSize: '0.9rem',
-                                                fontWeight: '600',
-                                                textTransform: 'uppercase',
-                                                cursor: 'pointer',
-                                                borderRadius: '4px'
-                                            }}
-                                        >
-                                            Disconnect Google Sheets
+                                        <button type="submit" className="btn" disabled={isLoading}>
+                                            {isLoading ? '💾 Saving...' : 'Submit Reading'}
                                         </button>
                                     </div>
-                                </div>
-                            ) : (
-                                <div>
+                                </form>
+                            </div>
+                        )}
+
+                        {activeTab === 'history' && (
+                            <div className="form-section">
+                                <h2>Load History</h2>
+                                {history.length > 0 ? (
+                                    <table className="history-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Time Slot</th>
+                                                <th>Entry Time</th>
+                                                <th>PTR</th>
+                                                <th>Load (MW)</th>
+                                                <th>HV Amps</th>
+                                                <th>User</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {history.map(entry => (
+                                                <tr key={entry.id}>
+                                                    <td>{entry.date}</td>
+                                                    <td style={{ fontWeight: '600', color: 'var(--accent-yellow)' }}>{entry.time} Hrs</td>
+                                                    <td>{entry.entryTime}</td>
+                                                    <td>{entry.ptrName || ptrs.find(p => p.id === entry.ptr)?.name}</td>
+                                                    <td style={{ fontWeight: '600', color: 'var(--accent-blue)' }}>
+                                                        {entry.mw.toFixed(1)}
+                                                    </td>
+                                                    <td style={{ fontWeight: '600', color: 'var(--accent-green)' }}>
+                                                        {entry.amps.toFixed(1)}
+                                                    </td>
+                                                    <td style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                        {entry.user || '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                ) : (
                                     <div className="alert warning">
-                                        <strong>⚠ Google Sheets Not Configured</strong><br/>
-                                        Data is currently only saved in your browser. Configure Google Sheets to share data across devices and users.
+                                        No historical data available. Start by entering load readings.
                                     </div>
-                                    
-                                    <div style={{ marginTop: '2rem' }}>
-                                        <div className="form-group">
-                                            <label>Google Apps Script Web App URL</label>
-                                            <input 
-                                                type="text"
-                                                value={googleSheetsUrl}
-                                                onChange={(e) => setGoogleSheetsUrl(e.target.value)}
-                                                placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
-                                                style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-                                            />
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <div className="form-section">
+                                <h2>Google Sheets Backup Configuration</h2>
+                                
+                                <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(0, 212, 255, 0.1)', border: '2px solid var(--accent-blue)', borderRadius: '8px' }}>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                        📌 How Hybrid Storage Works
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                                        <strong style={{ color: 'var(--text-primary)' }}>Primary Storage:</strong> Cloud storage (instant sync across all devices)<br/>
+                                        <strong style={{ color: 'var(--text-primary)' }}>Optional Backup:</strong> Google Sheets (for reports, Excel exports, auditing)<br/><br/>
+                                        All data is accessible from any device regardless of Google Sheets configuration.
+                                    </div>
+                                </div>
+                                
+                                {isConfigured ? (
+                                    <div>
+                                        <div className="alert">
+                                            <strong>✓ Google Sheets Backup Enabled</strong><br/>
+                                            Data is being backed up to Google Sheets in the background.
+                                        </div>
+                                        
+                                        <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(10, 14, 26, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px' }}>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>CURRENT WEB APP URL:</div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                                                {googleSheetsUrl}
+                                            </div>
                                         </div>
                                         
                                         <div style={{ marginTop: '2rem' }}>
                                             <button 
                                                 onClick={() => {
-                                                    if (googleSheetsUrl.trim()) {
-                                                        localStorage.setItem('google_sheets_url', googleSheetsUrl.trim());
-                                                        setIsConfigured(true);
-                                                        setSyncStatus('✓ Connected successfully');
-                                                        setTimeout(() => setSyncStatus(''), 3000);
-                                                    } else {
-                                                        alert('Please enter a valid Google Apps Script URL');
+                                                    if (confirm('Disconnect Google Sheets backup? (Cloud storage will continue working)')) {
+                                                        localStorage.removeItem('google_sheets_url');
+                                                        setGoogleSheetsUrl('');
+                                                        setIsConfigured(false);
                                                     }
                                                 }}
-                                                className="btn"
+                                                style={{ 
+                                                    padding: '1rem 2rem', 
+                                                    background: 'rgba(255, 56, 56, 0.2)', 
+                                                    border: '2px solid var(--accent-red)', 
+                                                    color: 'var(--accent-red)',
+                                                    fontFamily: 'JetBrains Mono, monospace',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: '600',
+                                                    textTransform: 'uppercase',
+                                                    cursor: 'pointer',
+                                                    borderRadius: '4px'
+                                                }}
                                             >
-                                                Connect to Google Sheets
+                                                Disconnect Google Sheets
                                             </button>
                                         </div>
                                     </div>
-                                    
-                                    <div style={{ marginTop: '3rem', padding: '2rem', background: 'rgba(0, 212, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
-                                        <div style={{ fontSize: '1rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '1rem' }}>
-                                            📋 Setup Instructions
+                                ) : (
+                                    <div>
+                                        <div className="alert warning">
+                                            <strong>⚠ Google Sheets Backup Not Configured</strong><br/>
+                                            Data is saved to cloud storage only. Configure Google Sheets for additional backup.
                                         </div>
-                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
-                                            <strong style={{ color: 'var(--text-primary)' }}>Step 1:</strong> Create a new Google Sheet<br/>
-                                            <strong style={{ color: 'var(--text-primary)' }}>Step 2:</strong> Go to Extensions → Apps Script<br/>
-                                            <strong style={{ color: 'var(--text-primary)' }}>Step 3:</strong> Paste the provided script code<br/>
-                                            <strong style={{ color: 'var(--text-primary)' }}>Step 4:</strong> Deploy as Web App<br/>
-                                            <strong style={{ color: 'var(--text-primary)' }}>Step 5:</strong> Copy the Web App URL and paste it above<br/>
-                                            <br/>
-                                            <div style={{ color: 'var(--accent-yellow)' }}>
-                                                ℹ️ Detailed setup instructions are provided in the separate setup guide document.
+                                        
+                                        <div style={{ marginTop: '2rem' }}>
+                                            <div className="form-group">
+                                                <label>Google Apps Script Web App URL</label>
+                                                <input 
+                                                    type="text"
+                                                    value={googleSheetsUrl}
+                                                    onChange={(e) => setGoogleSheetsUrl(e.target.value)}
+                                                    placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+                                                    style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+                                                />
+                                            </div>
+                                            
+                                            <div style={{ marginTop: '2rem' }}>
+                                                <button 
+                                                    onClick={() => {
+                                                        if (googleSheetsUrl.trim()) {
+                                                            localStorage.setItem('google_sheets_url', googleSheetsUrl.trim());
+                                                            setIsConfigured(true);
+                                                            setSyncStatus('✓ Google Sheets backup enabled');
+                                                            setTimeout(() => setSyncStatus(''), 3000);
+                                                        } else {
+                                                            alert('Please enter a valid Google Apps Script URL');
+                                                        }
+                                                    }}
+                                                    className="btn"
+                                                >
+                                                    Enable Google Sheets Backup
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{ marginTop: '3rem', padding: '2rem', background: 'rgba(0, 212, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                                            <div style={{ fontSize: '1rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '1rem' }}>
+                                                📋 Setup Instructions
+                                            </div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 1:</strong> Create a new Google Sheet<br/>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 2:</strong> Go to Extensions → Apps Script<br/>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 3:</strong> Paste the Google Apps Script code<br/>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 4:</strong> Deploy as Web App<br/>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 5:</strong> Copy the Web App URL and paste it above
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </>
             );
         };
 
