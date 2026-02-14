@@ -764,39 +764,15 @@
             }, [selectedDate, isAuthenticated]);
 
             const loadData = async (date) => {
-                // Try to load from Google Sheets first
-                if (isConfigured && googleSheetsUrl) {
-                    try {
-                        setSyncStatus('Loading from Google Sheets...');
-                        const response = await fetch(googleSheetsUrl, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                action: 'getReadings',
-                                date: date
-                            })
-                        });
-                        
-                        // Note: Due to no-cors, we can't read the response
-                        // But we'll also try to load from localStorage as backup
-                        setSyncStatus('');
-                    } catch (error) {
-                        console.log('Google Sheets fetch initiated');
-                        setSyncStatus('');
-                    }
-                }
+                const storageKey = `readings_${date}`;
                 
-                // Load from localStorage as fallback/cache
+                // Load from localStorage
                 try {
-                    const storageKey = `readings_${date}`;
-                    const readingsData = await window.storage.get(storageKey);
-                    const historyData = await window.storage.get('ptr_history');
+                    const readingsData = localStorage.getItem(storageKey);
+                    const historyData = localStorage.getItem('ptr_history');
                     
                     if (readingsData) {
-                        setReadings(JSON.parse(readingsData.value));
+                        setReadings(JSON.parse(readingsData));
                     } else {
                         setReadings({
                             ptr1_220: initialReadings(),
@@ -805,11 +781,12 @@
                             ptr2_132: initialReadings()
                         });
                     }
+                    
                     if (historyData) {
-                        setHistory(JSON.parse(historyData.value));
+                        setHistory(JSON.parse(historyData));
                     }
                 } catch (error) {
-                    console.log('No existing data found');
+                    console.log('Error loading from localStorage:', error);
                     setReadings({
                         ptr1_220: initialReadings(),
                         ptr2_220: initialReadings(),
@@ -817,15 +794,99 @@
                         ptr2_132: initialReadings()
                     });
                 }
+                
+                // If Google Sheets is configured, try to load from there
+                if (isConfigured && googleSheetsUrl) {
+                    loadFromGoogleSheets(date);
+                }
+            };
+
+            const loadFromGoogleSheets = (date) => {
+                if (!googleSheetsUrl) return;
+                
+                setSyncStatus('Loading from Google Sheets...');
+                
+                // Create script element for JSONP
+                const script = document.createElement('script');
+                const callbackName = 'googleSheetsCallback_' + Date.now();
+                
+                // Define callback function
+                window[callbackName] = function(response) {
+                    if (response.status === 'success' && response.data) {
+                        const loadedReadings = response.data;
+                        setReadings(loadedReadings);
+                        
+                        // Save to localStorage as cache
+                        const storageKey = `readings_${date}`;
+                        localStorage.setItem(storageKey, JSON.stringify(loadedReadings));
+                        
+                        setSyncStatus('✓ Loaded from Google Sheets');
+                        setTimeout(() => setSyncStatus(''), 3000);
+                    } else {
+                        setSyncStatus('');
+                    }
+                    
+                    // Cleanup
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                };
+                
+                // Make request
+                script.src = `${googleSheetsUrl}?action=getReadings&date=${date}&callback=${callbackName}`;
+                script.onerror = () => {
+                    setSyncStatus('');
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                };
+                
+                document.body.appendChild(script);
+            };
+
+            const loadHistoryFromGoogleSheets = () => {
+                if (!googleSheetsUrl) return;
+                
+                setSyncStatus('Loading history from Google Sheets...');
+                
+                const script = document.createElement('script');
+                const callbackName = 'googleSheetsHistoryCallback_' + Date.now();
+                
+                window[callbackName] = function(response) {
+                    if (response.status === 'success' && response.data) {
+                        setHistory(response.data);
+                        localStorage.setItem('ptr_history', JSON.stringify(response.data));
+                        setSyncStatus('✓ History loaded');
+                        setTimeout(() => setSyncStatus(''), 3000);
+                    } else {
+                        setSyncStatus('');
+                    }
+                    
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                };
+                
+                script.src = `${googleSheetsUrl}?action=getHistory&callback=${callbackName}`;
+                script.onerror = () => {
+                    setSyncStatus('');
+                    document.body.removeChild(script);
+                    delete window[callbackName];
+                };
+                
+                document.body.appendChild(script);
+            };
+
+            const refreshData = () => {
+                loadData(selectedDate);
+                loadHistoryFromGoogleSheets();
             };
 
             const saveData = async (storageKey, newReadings, newHistory) => {
-                // Save to localStorage first (immediate)
+                // Save to localStorage
                 try {
-                    await window.storage.set(storageKey, JSON.stringify(newReadings));
-                    await window.storage.set('ptr_history', JSON.stringify(newHistory));
+                    localStorage.setItem(storageKey, JSON.stringify(newReadings));
+                    localStorage.setItem('ptr_history', JSON.stringify(newHistory));
                 } catch (error) {
                     console.error('Error saving to localStorage:', error);
+                    alert('Error saving data locally. Your browser storage might be full.');
                 }
             };
 
@@ -1206,6 +1267,28 @@
                                 <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--accent-blue)' }}>
                                     Viewing: {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                 </div>
+                                {isConfigured && (
+                                    <button 
+                                        onClick={refreshData}
+                                        style={{
+                                            padding: '0.75rem 1.5rem',
+                                            background: 'rgba(0, 212, 255, 0.2)',
+                                            border: '2px solid var(--accent-blue)',
+                                            color: 'var(--accent-blue)',
+                                            fontFamily: 'JetBrains Mono, monospace',
+                                            fontSize: '0.8rem',
+                                            fontWeight: '600',
+                                            textTransform: 'uppercase',
+                                            cursor: 'pointer',
+                                            borderRadius: '4px',
+                                            transition: 'all 0.3s ease'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.background = 'var(--accent-blue)'}
+                                        onMouseOut={(e) => e.target.style.background = 'rgba(0, 212, 255, 0.2)'}
+                                    >
+                                        🔄 Refresh Data
+                                    </button>
+                                )}
                             </div>
 
                             <div className="ptr-grid">
@@ -1360,6 +1443,16 @@
                     {activeTab === 'settings' && (
                         <div className="form-section">
                             <h2>Google Sheets Configuration</h2>
+                            
+                            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255, 214, 0, 0.1)', border: '2px solid var(--accent-yellow)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--accent-yellow)', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                    ⚠️ IMPORTANT: Data Persistence
+                                </div>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                                    <strong style={{ color: 'var(--text-primary)' }}>Without Google Sheets:</strong> Data is only saved in your browser on this device. It will be lost if you clear browser data or use a different device.<br/><br/>
+                                    <strong style={{ color: 'var(--text-primary)' }}>With Google Sheets:</strong> All data is saved to the cloud and accessible from any device, by any team member, and persists forever.
+                                </div>
+                            </div>
                             
                             {isConfigured ? (
                                 <div>
