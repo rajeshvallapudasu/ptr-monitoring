@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTR Load Monitoring - Huzurnagar S/S | TGTRANSCO</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-dark: #0a0e1a;
+            --secondary-dark: #151b2e;
+            --accent-blue: #00d4ff;
+            --accent-yellow: #ffd600;
+            --accent-orange: #ff8c00;
+            --accent-red: #ff3838;
+            --accent-green: #00ff88;
+            --text-primary: #e8edf4;
+            --text-secondary: #8b9bb4;
+            --border-color: #2a3548;
+            --grid-color: rgba(0, 212, 255, 0.1);
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, var(--grid-color) 0px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(90deg, var(--grid-color) 0px, transparent 1px, transparent 40px);
+            pointer-events: none;
+            z-index: 0;
+            animation: gridPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(255, 214, 0, 0.05) 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
+            animation: scanline 3s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .header .subtext {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 2px;
+        }
+
+        .header .timestamp {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--accent-yellow);
+            font-weight: 500;
+        }
+
+        /* Authentication Styles */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 450px;
+            background: rgba(21, 27, 46, 0.95);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-yellow));
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .login-header h1 {
+            font-size: 1.8rem;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .login-header p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-group input {
+            width: 100%;
+            background: rgba(10, 14, 26, 0.9);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            background: rgba(10, 14, 26, 1);
+        }
+
+        .input-group input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        .login-btn {
+            padding: 1.2rem;
+            background: linear-gradient(135deg, var(--accent-blue), #0099cc);
+            border: none;
+            color: var(--primary-dark);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            background: rgba(255, 56, 56, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            text-align: center;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .user-info .username {
+            font-weight: 600;
+            color: var(--accent-blue);
+            flex: 1;
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: rgba(255, 56, 56, 0.2);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: var(--accent-red);
+            color: var(--primary-dark);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-blue);
+            transition: width 0.3s ease;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--accent-blue);
+        }
+
+        .tab.active::after {
+            width: 100%;
+        }
+
+        .ptr-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .ptr-card {
+            background: rgba(21, 27, 46, 0.8);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .ptr-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-blue);
+            transition: all 0.3s ease;
+        }
+
+        .ptr-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-blue);
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .ptr-card.warning::before {
+            background: var(--accent-yellow);
+        }
+
+        .ptr-card.critical::before {
+            background: var(--accent-red);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .ptr-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .ptr-name {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ptr-capacity {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .load-display {
+            margin: 1.5rem 0;
+        }
+
+        .load-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: 'Space Mono', monospace;
+        }
+
+        .load-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-green);
+            transition: all 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-fill.warning {
+            background: var(--accent-yellow);
+        }
+
+        .progress-fill.critical {
+            background: var(--accent-red);
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+
+        .form-section {
+            background: rgba(21, 27, 46, 0.8);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-section h2 {
+            font-size: 1.2rem;
+            color: var(--accent-blue);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group input,
+        .form-group select {
+            background: rgba(10, 14, 26, 0.8);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--accent-blue), #0099cc);
+            border: none;
+            color: var(--primary-dark);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .history-table th {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--accent-blue);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .history-table td {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .history-table tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .alert {
+            padding: 1rem;
+            background: rgba(0, 255, 136, 0.1);
+            border-left: 4px solid var(--accent-green);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            color: var(--accent-green);
+            font-size: 0.85rem;
+        }
+
+        .alert.warning {
+            background: rgba(255, 214, 0, 0.1);
+            border-left-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+        }
+
+        .stat-chip {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 212, 255, 0.2);
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-chip.normal {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--accent-green);
+        }
+
+        .stat-chip.warning {
+            background: rgba(255, 214, 0, 0.2);
+            color: var(--accent-yellow);
+        }
+
+        .stat-chip.critical {
+            background: rgba(255, 56, 56, 0.2);
+            color: var(--accent-red);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .ptr-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .tab {
+                border-bottom: 1px solid var(--border-color);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const PTRMonitoringApp = () => {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [currentUser, setCurrentUser] = useState(null);
+            const [loginError, setLoginError] = useState('');
+            const [loginForm, setLoginForm] = useState({
+                username: '',
+                password: ''
+            });
+
+            // Google Sheets Configuration
+            const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
+            const [isConfigured, setIsConfigured] = useState(false);
+            const [syncStatus, setSyncStatus] = useState('');
+
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [currentTime, setCurrentTime] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+            
+            const timeSlots = {
+                morning: ['06:30', '07:00', '07:30', '08:00'],
+                evening: ['15:30', '16:00', '16:30', '17:00']
+            };
+            
+            const initialReadings = () => ({
+                '06:30': { mw: 0, amps: 0 },
+                '07:00': { mw: 0, amps: 0 },
+                '07:30': { mw: 0, amps: 0 },
+                '08:00': { mw: 0, amps: 0 },
+                '15:30': { mw: 0, amps: 0 },
+                '16:00': { mw: 0, amps: 0 },
+                '16:30': { mw: 0, amps: 0 },
+                '17:00': { mw: 0, amps: 0 }
+            });
+            
+            const [readings, setReadings] = useState({
+                ptr1_220: initialReadings(),
+                ptr2_220: initialReadings(),
+                ptr1_132: initialReadings(),
+                ptr2_132: initialReadings()
+            });
+            
+            const [formData, setFormData] = useState({
+                ptr: 'ptr1_220',
+                time: '06:30',
+                mw: '',
+                amps: '',
+                date: new Date().toISOString().split('T')[0]
+            });
+            const [history, setHistory] = useState([]);
+
+            // Default users
+            const defaultUsers = [
+                { username: 'admin', password: 'admin123', role: 'Admin' },
+                { username: 'engineer', password: 'engineer123', role: 'Engineer' },
+                { username: 'operator', password: 'operator123', role: 'Operator' }
+            ];
+
+            // Check for existing session on mount
+            useEffect(() => {
+                const session = localStorage.getItem('ptr_session');
+                if (session) {
+                    try {
+                        const userData = JSON.parse(session);
+                        setCurrentUser(userData);
+                        setIsAuthenticated(true);
+                    } catch (error) {
+                        localStorage.removeItem('ptr_session');
+                    }
+                }
+                
+                // Check for Google Sheets URL
+                const savedUrl = localStorage.getItem('google_sheets_url');
+                if (savedUrl) {
+                    setGoogleSheetsUrl(savedUrl);
+                    setIsConfigured(true);
+                }
+            }, []);
+
+            // Timer and data loading (only when authenticated)
+            useEffect(() => {
+                if (!isAuthenticated) return;
+                
+                const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+                loadData(selectedDate);
+                return () => clearInterval(timer);
+            }, [selectedDate, isAuthenticated]);
+
+            const loadData = async (date) => {
+                // Try to load from Google Sheets first
+                if (isConfigured && googleSheetsUrl) {
+                    try {
+                        setSyncStatus('Loading from Google Sheets...');
+                        const response = await fetch(googleSheetsUrl, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                action: 'getReadings',
+                                date: date
+                            })
+                        });
+                        
+                        // Note: Due to no-cors, we can't read the response
+                        // But we'll also try to load from localStorage as backup
+                        setSyncStatus('');
+                    } catch (error) {
+                        console.log('Google Sheets fetch initiated');
+                        setSyncStatus('');
+                    }
+                }
+                
+                // Load from localStorage as fallback/cache
+                try {
+                    const storageKey = `readings_${date}`;
+                    const readingsData = await window.storage.get(storageKey);
+                    const historyData = await window.storage.get('ptr_history');
+                    
+                    if (readingsData) {
+                        setReadings(JSON.parse(readingsData.value));
+                    } else {
+                        setReadings({
+                            ptr1_220: initialReadings(),
+                            ptr2_220: initialReadings(),
+                            ptr1_132: initialReadings(),
+                            ptr2_132: initialReadings()
+                        });
+                    }
+                    if (historyData) {
+                        setHistory(JSON.parse(historyData.value));
+                    }
+                } catch (error) {
+                    console.log('No existing data found');
+                    setReadings({
+                        ptr1_220: initialReadings(),
+                        ptr2_220: initialReadings(),
+                        ptr1_132: initialReadings(),
+                        ptr2_132: initialReadings()
+                    });
+                }
+            };
+
+            const saveData = async (storageKey, newReadings, newHistory) => {
+                // Save to localStorage first (immediate)
+                try {
+                    await window.storage.set(storageKey, JSON.stringify(newReadings));
+                    await window.storage.set('ptr_history', JSON.stringify(newHistory));
+                } catch (error) {
+                    console.error('Error saving to localStorage:', error);
+                }
+            };
+
+            const saveToGoogleSheets = async (entry, ptrName) => {
+                if (!isConfigured || !googleSheetsUrl) {
+                    return;
+                }
+                
+                try {
+                    setSyncStatus('Syncing to Google Sheets...');
+                    await fetch(googleSheetsUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            action: 'saveReading',
+                            date: entry.date,
+                            time: entry.time,
+                            entryTime: entry.entryTime,
+                            ptr: entry.ptr,
+                            ptrName: ptrName,
+                            mw: entry.mw,
+                            amps: entry.amps,
+                            user: currentUser.username
+                        })
+                    });
+                    
+                    setTimeout(() => {
+                        setSyncStatus('✓ Synced to Google Sheets');
+                        setTimeout(() => setSyncStatus(''), 3000);
+                    }, 1000);
+                } catch (error) {
+                    console.error('Error saving to Google Sheets:', error);
+                    setSyncStatus('⚠ Saved locally only');
+                    setTimeout(() => setSyncStatus(''), 3000);
+                }
+            };
+
+            const handleLoginSubmit = (e) => {
+                e.preventDefault();
+                setLoginError('');
+
+                const user = defaultUsers.find(
+                    u => u.username === loginForm.username && u.password === loginForm.password
+                );
+
+                if (user) {
+                    const userData = { username: user.username, role: user.role };
+                    localStorage.setItem('ptr_session', JSON.stringify(userData));
+                    setCurrentUser(userData);
+                    setIsAuthenticated(true);
+                    setLoginForm({ username: '', password: '' });
+                } else {
+                    setLoginError('Invalid username or password');
+                }
+            };
+
+            const handleLogout = () => {
+                localStorage.removeItem('ptr_session');
+                setCurrentUser(null);
+                setIsAuthenticated(false);
+                setActiveTab('dashboard');
+            };
+
+            const handleLoginChange = (e) => {
+                const { name, value } = e.target;
+                setLoginForm(prev => ({ ...prev, [name]: value }));
+                setLoginError('');
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const mwValue = parseFloat(formData.mw);
+                const ampsValue = parseFloat(formData.amps);
+                
+                if (!mwValue || mwValue < 0 || !ampsValue || ampsValue < 0) {
+                    alert('Please enter valid MW and Amps values');
+                    return;
+                }
+
+                const storageKey = `readings_${formData.date}`;
+                const newReadings = { ...readings };
+                newReadings[formData.ptr][formData.time] = { mw: mwValue, amps: ampsValue };
+
+                const ptrInfo = ptrs.find(p => p.id === formData.ptr);
+                const newEntry = {
+                    id: Date.now(),
+                    date: formData.date,
+                    time: formData.time,
+                    entryTime: currentTime.toLocaleTimeString(),
+                    ptr: formData.ptr,
+                    mw: mwValue,
+                    amps: ampsValue
+                };
+
+                const newHistory = [newEntry, ...history].slice(0, 100);
+
+                setReadings(newReadings);
+                setHistory(newHistory);
+                saveData(storageKey, newReadings, newHistory);
+                
+                // Save to Google Sheets
+                saveToGoogleSheets(newEntry, ptrInfo.name);
+
+                setFormData(prev => ({ ...prev, mw: '', amps: '' }));
+            };
+
+            const getLoadStatus = (amps, ratedAmps) => {
+                const percentage = (amps / ratedAmps) * 100;
+                if (percentage >= 90) return 'critical';
+                if (percentage >= 75) return 'warning';
+                return 'normal';
+            };
+
+            const getLoadPercentage = (amps, ratedAmps) => {
+                return ((amps / ratedAmps) * 100).toFixed(1);
+            };
+
+            const getPeakAmps = (ptrId) => {
+                const allAmps = Object.values(readings[ptrId]).map(r => r.amps || 0);
+                return Math.max(...allAmps);
+            };
+
+            const getPeakMW = (ptrId) => {
+                const allMW = Object.values(readings[ptrId]).map(r => r.mw || 0);
+                return Math.max(...allMW);
+            };
+
+            const ptrs = [
+                { id: 'ptr1_220', name: 'PTR-1 (220/132 KV)', capacity: 100, ratedAmps: 262, voltage: '220/132' },
+                { id: 'ptr2_220', name: 'PTR-2 (220/132 KV)', capacity: 100, ratedAmps: 262, voltage: '220/132' },
+                { id: 'ptr1_132', name: 'PTR-1 (132/33 KV)', capacity: 31.5, ratedAmps: 138, voltage: '132/33' },
+                { id: 'ptr2_132', name: 'PTR-2 (132/33 KV)', capacity: 31.5, ratedAmps: 138, voltage: '132/33' }
+            ];
+
+            const PTRCard = ({ ptr }) => {
+                const peakAmps = getPeakAmps(ptr.id);
+                const peakMW = getPeakMW(ptr.id);
+                const status = getLoadStatus(peakAmps, ptr.ratedAmps);
+                const percentage = getLoadPercentage(peakAmps, ptr.ratedAmps);
+
+                return (
+                    <div className={`ptr-card ${status}`}>
+                        <div className="ptr-header">
+                            <div className="ptr-name">{ptr.name}</div>
+                            <div className="ptr-capacity">{ptr.capacity} MVA</div>
+                        </div>
+                        
+                        <div className="load-display">
+                            <div className="load-value">{peakAmps.toFixed(1)}</div>
+                            <div className="load-label">HV Amps (Peak)</div>
+                        </div>
+
+                        <div style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--accent-yellow)' }}>{peakMW.toFixed(1)} MW</div>
+                            <div className="load-label">Peak Load</div>
+                        </div>
+
+                        <div className="progress-bar">
+                            <div 
+                                className={`progress-fill ${status}`}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                            ></div>
+                        </div>
+
+                        <div className="status-row">
+                            <span>Current Loading: {percentage}%</span>
+                            <span className={`stat-chip ${status}`}>{status}</span>
+                        </div>
+
+                        <div className="status-row" style={{ marginTop: '0.5rem' }}>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                                Rated: {ptr.ratedAmps}A @ {ptr.voltage} KV
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: peakAmps > 0 ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>
+                                {peakAmps.toFixed(1)}A / {ptr.ratedAmps}A
+                            </span>
+                        </div>
+
+                        <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                Morning Hours
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+                                {timeSlots.morning.map(time => {
+                                    const reading = readings[ptr.id][time];
+                                    const hasData = reading.mw > 0 || reading.amps > 0;
+                                    return (
+                                        <div key={time} style={{ background: 'rgba(0, 212, 255, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{time} Hrs</div>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: '600', color: hasData ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>
+                                                {reading.mw.toFixed(1)} MW
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: hasData ? 'var(--accent-green)' : 'var(--text-secondary)' }}>
+                                                {reading.amps.toFixed(1)} A
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                Evening Hours
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                {timeSlots.evening.map(time => {
+                                    const reading = readings[ptr.id][time];
+                                    const hasData = reading.mw > 0 || reading.amps > 0;
+                                    return (
+                                        <div key={time} style={{ background: 'rgba(255, 214, 0, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{time} Hrs</div>
+                                            <div style={{ fontSize: '0.85rem', fontWeight: '600', color: hasData ? 'var(--accent-yellow)' : 'var(--text-secondary)' }}>
+                                                {reading.mw.toFixed(1)} MW
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: hasData ? 'var(--accent-orange)' : 'var(--text-secondary)' }}>
+                                                {reading.amps.toFixed(1)} A
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Login Screen
+            if (!isAuthenticated) {
+                return (
+                    <div className="login-container">
+                        <div className="login-box">
+                            <div className="login-header">
+                                <h1>TGTRANSCO</h1>
+                                <p>PTR Load Monitoring System</p>
+                                <p style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
+                                    Huzurnagar 220/132/33 KV Substation
+                                </p>
+                            </div>
+
+                            <form className="login-form" onSubmit={handleLoginSubmit}>
+                                {loginError && (
+                                    <div className="error-message">
+                                        {loginError}
+                                    </div>
+                                )}
+
+                                <div className="input-group">
+                                    <label>Username</label>
+                                    <input
+                                        type="text"
+                                        name="username"
+                                        value={loginForm.username}
+                                        onChange={handleLoginChange}
+                                        placeholder="Enter username"
+                                        required
+                                        autoComplete="username"
+                                    />
+                                </div>
+
+                                <div className="input-group">
+                                    <label>Password</label>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        value={loginForm.password}
+                                        onChange={handleLoginChange}
+                                        placeholder="Enter password"
+                                        required
+                                        autoComplete="current-password"
+                                    />
+                                </div>
+
+                                <button type="submit" className="login-btn">
+                                    Sign In
+                                </button>
+                            </form>
+
+                            <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(0, 212, 255, 0.05)', borderRadius: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                <div style={{ marginBottom: '0.5rem', color: 'var(--accent-blue)', fontWeight: '600' }}>Demo Credentials:</div>
+                                <div>• admin / admin123</div>
+                                <div>• engineer / engineer123</div>
+                                <div>• operator / operator123</div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Main Application
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>PTR Load Monitoring</h1>
+                        <div className="subtext">220/132/33 KV Substation - Huzurnagar | TGTRANSCO</div>
+                        <div className="timestamp">
+                            {currentTime.toLocaleDateString('en-IN', { 
+                                weekday: 'long', 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                            })} | {currentTime.toLocaleTimeString('en-IN')}
+                        </div>
+                    </div>
+
+                    <div className="user-info">
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>LOGGED IN AS:</span>
+                        <span className="username">{currentUser.username}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>({currentUser.role})</span>
+                        {syncStatus && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-green)', marginLeft: '1rem' }}>
+                                {syncStatus}
+                            </span>
+                        )}
+                        {isConfigured && (
+                            <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'rgba(0, 255, 136, 0.2)', color: 'var(--accent-green)', borderRadius: '4px', marginLeft: 'auto' }}>
+                                ● Google Sheets Connected
+                            </span>
+                        )}
+                        <button onClick={handleLogout} className="logout-btn">
+                            Logout
+                        </button>
+                    </div>
+
+                    <div className="tabs">
+                        <button 
+                            className={`tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('dashboard')}
+                        >
+                            Dashboard
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'entry' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('entry')}
+                        >
+                            Data Entry
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'history' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('history')}
+                        >
+                            History
+                        </button>
+                        <button 
+                            className={`tab ${activeTab === 'settings' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('settings')}
+                        >
+                            Settings
+                        </button>
+                    </div>
+
+                    {activeTab === 'dashboard' && (
+                        <>
+                            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(21, 27, 46, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px' }}>
+                                <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                    View Date:
+                                </label>
+                                <input 
+                                    type="date" 
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    style={{ 
+                                        background: 'rgba(10, 14, 26, 0.8)', 
+                                        border: '2px solid var(--border-color)', 
+                                        color: 'var(--text-primary)', 
+                                        padding: '0.75rem', 
+                                        borderRadius: '4px', 
+                                        fontFamily: 'JetBrains Mono, monospace', 
+                                        fontSize: '0.9rem' 
+                                    }}
+                                />
+                                <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--accent-blue)' }}>
+                                    Viewing: {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                </div>
+                            </div>
+
+                            <div className="ptr-grid">
+                                {ptrs.map(ptr => (
+                                    <PTRCard key={ptr.id} ptr={ptr} />
+                                ))}
+                            </div>
+
+                            {Object.values(readings).some(r => Object.values(r).some(v => v.mw > 0 || v.amps > 0)) && (
+                                <div className="alert">
+                                    <strong>✓ System Active</strong> - Load monitoring data available. All transformers operational.
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {activeTab === 'entry' && (
+                        <div className="form-section">
+                            <h2>Enter Load Reading</h2>
+                            <form onSubmit={handleSubmit}>
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label>Select PTR</label>
+                                        <select 
+                                            name="ptr" 
+                                            value={formData.ptr}
+                                            onChange={handleInputChange}
+                                        >
+                                            {ptrs.map(ptr => (
+                                                <option key={ptr.id} value={ptr.id}>
+                                                    {ptr.name} - {ptr.capacity} MVA (Rated: {ptr.ratedAmps}A)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Time Slot</label>
+                                        <select 
+                                            name="time" 
+                                            value={formData.time}
+                                            onChange={handleInputChange}
+                                        >
+                                            <optgroup label="Morning Hours">
+                                                {timeSlots.morning.map(time => (
+                                                    <option key={time} value={time}>{time} Hrs</option>
+                                                ))}
+                                            </optgroup>
+                                            <optgroup label="Evening Hours">
+                                                {timeSlots.evening.map(time => (
+                                                    <option key={time} value={time}>{time} Hrs</option>
+                                                ))}
+                                            </optgroup>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Load (MW)</label>
+                                        <input 
+                                            type="number" 
+                                            name="mw"
+                                            step="0.1"
+                                            value={formData.mw}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter load in MW"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>HV Current (Amps)</label>
+                                        <input 
+                                            type="number" 
+                                            name="amps"
+                                            step="0.1"
+                                            value={formData.amps}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter HV amperes"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Date</label>
+                                        <input 
+                                            type="date" 
+                                            name="date"
+                                            value={formData.date}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0, 212, 255, 0.05)', borderRadius: '6px', fontSize: '0.8rem' }}>
+                                    <div style={{ color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>Rated HV Amperes:</div>
+                                    <div style={{ color: 'var(--text-secondary)' }}>
+                                        • 100 MVA PTRs (220/132 KV): <span style={{ color: 'var(--accent-yellow)' }}>262 Amps</span><br/>
+                                        • 31.5 MVA PTRs (132/33 KV): <span style={{ color: 'var(--accent-yellow)' }}>138 Amps</span>
+                                    </div>
+                                </div>
+
+                                <div style={{ marginTop: '2rem' }}>
+                                    <button type="submit" className="btn">
+                                        Submit Reading
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {activeTab === 'history' && (
+                        <div className="form-section">
+                            <h2>Load History</h2>
+                            {history.length > 0 ? (
+                                <table className="history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Time Slot</th>
+                                            <th>Entry Time</th>
+                                            <th>PTR</th>
+                                            <th>Load (MW)</th>
+                                            <th>HV Amps</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {history.map(entry => (
+                                            <tr key={entry.id}>
+                                                <td>{entry.date}</td>
+                                                <td style={{ fontWeight: '600', color: 'var(--accent-yellow)' }}>{entry.time} Hrs</td>
+                                                <td>{entry.entryTime}</td>
+                                                <td>{ptrs.find(p => p.id === entry.ptr)?.name}</td>
+                                                <td style={{ fontWeight: '600', color: 'var(--accent-blue)' }}>
+                                                    {entry.mw.toFixed(1)}
+                                                </td>
+                                                <td style={{ fontWeight: '600', color: 'var(--accent-green)' }}>
+                                                    {entry.amps.toFixed(1)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="alert warning">
+                                    No historical data available. Start by entering load readings.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'settings' && (
+                        <div className="form-section">
+                            <h2>Google Sheets Configuration</h2>
+                            
+                            {isConfigured ? (
+                                <div>
+                                    <div className="alert">
+                                        <strong>✓ Connected to Google Sheets</strong><br/>
+                                        All data entries are being saved to your Google Sheet automatically.
+                                    </div>
+                                    
+                                    <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(10, 14, 26, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>CURRENT WEB APP URL:</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                                            {googleSheetsUrl}
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ marginTop: '2rem' }}>
+                                        <button 
+                                            onClick={() => {
+                                                if (confirm('Are you sure you want to disconnect Google Sheets? Data will only be saved locally.')) {
+                                                    localStorage.removeItem('google_sheets_url');
+                                                    setGoogleSheetsUrl('');
+                                                    setIsConfigured(false);
+                                                }
+                                            }}
+                                            style={{ 
+                                                padding: '1rem 2rem', 
+                                                background: 'rgba(255, 56, 56, 0.2)', 
+                                                border: '2px solid var(--accent-red)', 
+                                                color: 'var(--accent-red)',
+                                                fontFamily: 'JetBrains Mono, monospace',
+                                                fontSize: '0.9rem',
+                                                fontWeight: '600',
+                                                textTransform: 'uppercase',
+                                                cursor: 'pointer',
+                                                borderRadius: '4px'
+                                            }}
+                                        >
+                                            Disconnect Google Sheets
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="alert warning">
+                                        <strong>⚠ Google Sheets Not Configured</strong><br/>
+                                        Data is currently only saved in your browser. Configure Google Sheets to share data across devices and users.
+                                    </div>
+                                    
+                                    <div style={{ marginTop: '2rem' }}>
+                                        <div className="form-group">
+                                            <label>Google Apps Script Web App URL</label>
+                                            <input 
+                                                type="text"
+                                                value={googleSheetsUrl}
+                                                onChange={(e) => setGoogleSheetsUrl(e.target.value)}
+                                                placeholder="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec"
+                                                style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+                                            />
+                                        </div>
+                                        
+                                        <div style={{ marginTop: '2rem' }}>
+                                            <button 
+                                                onClick={() => {
+                                                    if (googleSheetsUrl.trim()) {
+                                                        localStorage.setItem('google_sheets_url', googleSheetsUrl.trim());
+                                                        setIsConfigured(true);
+                                                        setSyncStatus('✓ Connected successfully');
+                                                        setTimeout(() => setSyncStatus(''), 3000);
+                                                    } else {
+                                                        alert('Please enter a valid Google Apps Script URL');
+                                                    }
+                                                }}
+                                                className="btn"
+                                            >
+                                                Connect to Google Sheets
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ marginTop: '3rem', padding: '2rem', background: 'rgba(0, 212, 255, 0.05)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                                        <div style={{ fontSize: '1rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '1rem' }}>
+                                            📋 Setup Instructions
+                                        </div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Step 1:</strong> Create a new Google Sheet<br/>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Step 2:</strong> Go to Extensions → Apps Script<br/>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Step 3:</strong> Paste the provided script code<br/>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Step 4:</strong> Deploy as Web App<br/>
+                                            <strong style={{ color: 'var(--text-primary)' }}>Step 5:</strong> Copy the Web App URL and paste it above<br/>
+                                            <br/>
+                                            <div style={{ color: 'var(--accent-yellow)' }}>
+                                                ℹ️ Detailed setup instructions are provided in the separate setup guide document.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<PTRMonitoringApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
