@@ -581,6 +581,15 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
+            overflow-x: auto;
+            display: block;
+        }
+
+        .history-table thead,
+        .history-table tbody {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
         }
 
         .history-table th,
@@ -623,6 +632,12 @@
             color: var(--accent-yellow);
         }
 
+        .alert.error {
+            background: rgba(255, 56, 56, 0.1);
+            border-left-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
         .alert.info {
             background: rgba(0, 212, 255, 0.1);
             border-left-color: var(--accent-blue);
@@ -662,7 +677,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(10, 14, 26, 0.8);
+            background: rgba(10, 14, 26, 0.9);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -691,6 +706,10 @@
         }
 
         @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
             .header h1 {
                 font-size: 1.5rem;
             }
@@ -710,6 +729,15 @@
             
             .tab {
                 border-bottom: 1px solid var(--border-color);
+            }
+
+            .history-table {
+                font-size: 0.75rem;
+            }
+
+            .history-table th,
+            .history-table td {
+                padding: 0.5rem;
             }
         }
     </style>
@@ -735,6 +763,7 @@
 
             const [syncStatus, setSyncStatus] = useState('');
             const [isLoading, setIsLoading] = useState(false);
+            const [isSaving, setIsSaving] = useState(false);
 
             const [activeTab, setActiveTab] = useState('dashboard');
             const [currentTime, setCurrentTime] = useState(new Date());
@@ -813,21 +842,68 @@
                 loadData(selectedDate);
             }, [selectedDate, isAuthenticated]);
 
-            // Cloud storage functions using window.storage API
             const loadData = async (date) => {
                 setIsLoading(true);
                 const storageKey = `ptr_readings_${date}`;
                 
-                try {
-                    // Load readings from cloud storage (PRIMARY SOURCE)
-                    const result = await window.storage.get(storageKey, true);
+                // Try to load from Google Sheets first if configured
+                if (isConfigured && googleSheetsUrl) {
+                    try {
+                        console.log('Loading from Google Sheets...');
+                        const response = await fetch(`${googleSheetsUrl}?action=getReadings&date=${date}`);
+                        const result = await response.json();
+                        
+                        if (result.status === 'success' && result.data) {
+                            console.log('Data loaded from Google Sheets:', result.data);
+                            setReadings(result.data);
+                            // Cache to localStorage
+                            localStorage.setItem(storageKey, JSON.stringify(result.data));
+                            setSyncStatus('✓ Loaded from Google Sheets');
+                            setTimeout(() => setSyncStatus(''), 2000);
+                        } else {
+                            console.log('No data in Google Sheets, using local');
+                            loadFromLocalStorage(date, storageKey);
+                        }
+                    } catch (error) {
+                        console.error('Google Sheets load failed:', error);
+                        setSyncStatus('⚠ Using local data');
+                        setTimeout(() => setSyncStatus(''), 2000);
+                        loadFromLocalStorage(date, storageKey);
+                    }
                     
-                    if (result && result.value) {
-                        const loadedReadings = JSON.parse(result.value);
-                        setReadings(loadedReadings);
-                        console.log('Loaded readings from cloud:', loadedReadings);
+                    // Load history from Google Sheets
+                    try {
+                        const historyResponse = await fetch(`${googleSheetsUrl}?action=getHistory`);
+                        const historyResult = await historyResponse.json();
+                        
+                        if (historyResult.status === 'success' && historyResult.data) {
+                            setHistory(historyResult.data);
+                            localStorage.setItem('ptr_history', JSON.stringify(historyResult.data));
+                        }
+                    } catch (error) {
+                        console.log('History load failed:', error);
+                        const localHistory = localStorage.getItem('ptr_history');
+                        if (localHistory) {
+                            setHistory(JSON.parse(localHistory));
+                        }
+                    }
+                } else {
+                    // Load from localStorage only
+                    loadFromLocalStorage(date, storageKey);
+                }
+                
+                setIsLoading(false);
+            };
+            
+            const loadFromLocalStorage = (date, storageKey) => {
+                try {
+                    const readingsData = localStorage.getItem(storageKey);
+                    const historyData = localStorage.getItem('ptr_history');
+                    
+                    if (readingsData) {
+                        const parsed = JSON.parse(readingsData);
+                        setReadings(parsed);
                     } else {
-                        // No data for this date
                         setReadings({
                             ptr1_220: initialReadings(),
                             ptr2_220: initialReadings(),
@@ -836,14 +912,11 @@
                         });
                     }
                     
-                    // Load history
-                    const historyResult = await window.storage.get('ptr_history', true);
-                    if (historyResult && historyResult.value) {
-                        setHistory(JSON.parse(historyResult.value));
+                    if (historyData) {
+                        setHistory(JSON.parse(historyData));
                     }
-                    
                 } catch (error) {
-                    console.log('No data found or error loading:', error);
+                    console.error('Error loading from localStorage:', error);
                     setReadings({
                         ptr1_220: initialReadings(),
                         ptr2_220: initialReadings(),
@@ -851,41 +924,18 @@
                         ptr2_132: initialReadings()
                     });
                 }
-                
-                setIsLoading(false);
-            };
-
-            const saveToCloudStorage = async (date, newReadings, newHistory) => {
-                const storageKey = `ptr_readings_${date}`;
-                
-                try {
-                    // Save readings to cloud storage (shared=true makes it accessible to all users)
-                    await window.storage.set(storageKey, JSON.stringify(newReadings), true);
-                    
-                    // Save history
-                    await window.storage.set('ptr_history', JSON.stringify(newHistory), true);
-                    
-                    console.log('Data saved to cloud storage successfully');
-                    return true;
-                } catch (error) {
-                    console.error('Error saving to cloud storage:', error);
-                    return false;
-                }
             };
 
             const saveToGoogleSheets = async (entry, ptrName) => {
                 if (!isConfigured || !googleSheetsUrl) {
-                    console.log('Google Sheets not configured, skipping backup');
-                    return;
+                    return false;
                 }
                 
                 try {
-                    console.log('Syncing to Google Sheets in background...');
+                    console.log('Saving to Google Sheets...');
                     
-                    // Use fetch with no-cors for Google Apps Script
-                    await fetch(googleSheetsUrl, {
+                    const response = await fetch(googleSheetsUrl, {
                         method: 'POST',
-                        mode: 'no-cors',
                         headers: {
                             'Content-Type': 'application/json',
                         },
@@ -899,21 +949,21 @@
                             mw: entry.mw,
                             amps: entry.amps,
                             user: currentUser.username
-                        })
+                        }),
+                        mode: 'no-cors'
                     });
                     
-                    console.log('Successfully synced to Google Sheets');
+                    console.log('Google Sheets save initiated');
+                    return true;
                 } catch (error) {
-                    console.error('Error saving to Google Sheets (non-critical):', error);
-                    // Don't throw error - Google Sheets is just a backup
+                    console.error('Error saving to Google Sheets:', error);
+                    return false;
                 }
             };
 
             const refreshData = async () => {
-                setSyncStatus('🔄 Refreshing from cloud...');
+                setSyncStatus('🔄 Refreshing from Google Sheets...');
                 await loadData(selectedDate);
-                setSyncStatus('✓ Refreshed successfully');
-                setTimeout(() => setSyncStatus(''), 2000);
             };
 
             const handleLoginSubmit = (e) => {
@@ -955,6 +1005,13 @@
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
+
+                if (!isConfigured) {
+                    alert('Please configure Google Sheets URL in Settings first!');
+                    setActiveTab('settings');
+                    return;
+                }
+
                 const mwValue = parseFloat(formData.mw);
                 const ampsValue = parseFloat(formData.amps);
                 
@@ -963,17 +1020,17 @@
                     return;
                 }
 
-                setIsLoading(true);
-                setSyncStatus('💾 Saving to cloud...');
+                setIsSaving(true);
+                setSyncStatus('💾 Saving...');
 
-                // Load current readings for this date
                 const storageKey = `ptr_readings_${formData.date}`;
-                let dateReadings;
                 
+                // Load current readings for this date
+                let dateReadings;
                 try {
-                    const result = await window.storage.get(storageKey, true);
-                    if (result && result.value) {
-                        dateReadings = JSON.parse(result.value);
+                    const existingData = localStorage.getItem(storageKey);
+                    if (existingData) {
+                        dateReadings = JSON.parse(existingData);
                     } else {
                         dateReadings = {
                             ptr1_220: initialReadings(),
@@ -1009,48 +1066,40 @@
 
                 const newHistory = [newEntry, ...history].slice(0, 100);
 
-                // 1. Save to CLOUD STORAGE (PRIMARY - this is critical)
-                const cloudSaved = await saveToCloudStorage(formData.date, dateReadings, newHistory);
-                
-                if (cloudSaved) {
-                    // Update local state
-                    setHistory(newHistory);
-                    
-                    // If the form date matches selected date, update readings
-                    if (formData.date === selectedDate) {
-                        setReadings(dateReadings);
-                    } else {
-                        // Switch to the date we just entered data for
-                        setSelectedDate(formData.date);
-                    }
-                    
-                    // Clear form
-                    setFormData(prev => ({ ...prev, mw: '', amps: '' }));
-                    
-                    // Switch to dashboard
-                    setActiveTab('dashboard');
-                    
-                    setSyncStatus('✓ Data saved to cloud!');
-                    
-                    // 2. Sync to GOOGLE SHEETS (BACKGROUND - optional backup)
-                    if (isConfigured) {
-                        setSyncStatus('✓ Saved to cloud, syncing to Sheets...');
-                        // This happens in background, don't wait for it
-                        saveToGoogleSheets(newEntry, ptrInfo.name).then(() => {
-                            setSyncStatus('✓ Saved to cloud + Google Sheets!');
-                            setTimeout(() => setSyncStatus(''), 3000);
-                        }).catch(() => {
-                            setSyncStatus('✓ Saved to cloud (Sheets sync failed)');
-                            setTimeout(() => setSyncStatus(''), 3000);
-                        });
-                    } else {
-                        setTimeout(() => setSyncStatus(''), 3000);
-                    }
-                } else {
-                    alert('Failed to save data. Please try again.');
+                // Save to localStorage
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(dateReadings));
+                    localStorage.setItem('ptr_history', JSON.stringify(newHistory));
+                } catch (error) {
+                    console.error('Error saving to localStorage:', error);
+                    alert('Error saving data locally.');
+                    setIsSaving(false);
+                    return;
                 }
                 
-                setIsLoading(false);
+                // Update state
+                setHistory(newHistory);
+                
+                // If the form date matches selected date, update readings
+                if (formData.date === selectedDate) {
+                    setReadings(dateReadings);
+                } else {
+                    setSelectedDate(formData.date);
+                }
+                
+                // Save to Google Sheets
+                await saveToGoogleSheets(newEntry, ptrInfo.name);
+                
+                // Clear form
+                setFormData(prev => ({ ...prev, mw: '', amps: '' }));
+                
+                // Switch to dashboard
+                setActiveTab('dashboard');
+                
+                setSyncStatus('✓ Data saved successfully!');
+                setTimeout(() => setSyncStatus(''), 3000);
+                
+                setIsSaving(false);
             };
 
             const getLoadStatus = (amps, ratedAmps) => {
@@ -1237,11 +1286,11 @@
             // Main Application
             return (
                 <>
-                    {isLoading && (
+                    {(isLoading || isSaving) && (
                         <div className="loading-overlay">
                             <div className="loading-content">
                                 <div className="spinner"></div>
-                                <div>Loading data from cloud...</div>
+                                <div>{isLoading ? 'Loading data from Google Sheets...' : 'Saving data...'}</div>
                             </div>
                         </div>
                     )}
@@ -1269,12 +1318,9 @@
                                     {syncStatus}
                                 </span>
                             )}
-                            <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'rgba(0, 255, 136, 0.2)', color: 'var(--accent-green)', borderRadius: '4px' }}>
-                                ☁️ Cloud Sync
-                            </span>
                             {isConfigured && (
-                                <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'rgba(255, 214, 0, 0.2)', color: 'var(--accent-yellow)', borderRadius: '4px' }}>
-                                    📊 Sheets Backup
+                                <span style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem', background: 'rgba(0, 255, 136, 0.2)', color: 'var(--accent-green)', borderRadius: '4px', marginLeft: 'auto' }}>
+                                    ☁️ Real-Time Sync Active
                                 </span>
                             )}
                             <button onClick={handleLogout} className="logout-btn">
@@ -1282,9 +1328,17 @@
                             </button>
                         </div>
 
-                        <div className="alert info">
-                            <strong>☁️ Hybrid Storage Active</strong> - Data syncs to cloud instantly (visible across all devices){isConfigured ? ' + backs up to Google Sheets' : ''}. {!isConfigured && 'Configure Google Sheets in Settings for backup.'}
-                        </div>
+                        {!isConfigured && (
+                            <div className="alert warning">
+                                <strong>⚠️ Google Sheets Not Configured</strong> - Please configure Google Sheets URL in Settings to enable cross-device real-time sync. Currently data is only saved locally.
+                            </div>
+                        )}
+
+                        {isConfigured && (
+                            <div className="alert info">
+                                <strong>☁️ Real-Time Cross-Device Sync Enabled</strong> - Data automatically loads from Google Sheets. All devices see the same data instantly.
+                            </div>
+                        )}
 
                         <div className="tabs">
                             <button 
@@ -1337,20 +1391,22 @@
                                         }}
                                     />
                                     <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)' }}>
-                                        Viewing: {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                        {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                     </div>
-                                    <button 
-                                        onClick={refreshData}
-                                        disabled={isLoading}
-                                        className="btn"
-                                        style={{
-                                            padding: '0.75rem 1.5rem',
-                                            marginLeft: 'auto',
-                                            fontSize: '0.8rem'
-                                        }}
-                                    >
-                                        {isLoading ? '⏳ Loading...' : '🔄 Refresh from Cloud'}
-                                    </button>
+                                    {isConfigured && (
+                                        <button 
+                                            onClick={refreshData}
+                                            disabled={isLoading}
+                                            className="btn"
+                                            style={{
+                                                padding: '0.75rem 1.5rem',
+                                                marginLeft: 'auto',
+                                                fontSize: '0.8rem'
+                                            }}
+                                        >
+                                            {isLoading ? '⏳ Loading...' : '🔄 Refresh from Cloud'}
+                                        </button>
+                                    )}
                                 </div>
 
                                 <div className="ptr-grid">
@@ -1376,7 +1432,7 @@
                                         📋 Entering data for: {new Date(formData.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                     </div>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                        Data will sync to cloud (instant cross-device access){isConfigured ? ' + backup to Google Sheets' : ''}.
+                                        {isConfigured ? 'Data will sync to Google Sheets and be instantly visible across all devices.' : 'Configure Google Sheets in Settings for cross-device sync.'}
                                     </div>
                                 </div>
                                 
@@ -1388,7 +1444,7 @@
                                                 name="ptr" 
                                                 value={formData.ptr}
                                                 onChange={handleInputChange}
-                                                disabled={isLoading}
+                                                disabled={isSaving}
                                             >
                                                 {ptrs.map(ptr => (
                                                     <option key={ptr.id} value={ptr.id}>
@@ -1404,7 +1460,7 @@
                                                 name="time" 
                                                 value={formData.time}
                                                 onChange={handleInputChange}
-                                                disabled={isLoading}
+                                                disabled={isSaving}
                                             >
                                                 <optgroup label="Morning Hours">
                                                     {timeSlots.morning.map(time => (
@@ -1429,7 +1485,7 @@
                                                 onChange={handleInputChange}
                                                 placeholder="Enter load in MW"
                                                 required
-                                                disabled={isLoading}
+                                                disabled={isSaving}
                                             />
                                         </div>
 
@@ -1443,7 +1499,7 @@
                                                 onChange={handleInputChange}
                                                 placeholder="Enter HV amperes"
                                                 required
-                                                disabled={isLoading}
+                                                disabled={isSaving}
                                             />
                                         </div>
 
@@ -1455,7 +1511,7 @@
                                                 value={formData.date}
                                                 onChange={handleInputChange}
                                                 required
-                                                disabled={isLoading}
+                                                disabled={isSaving}
                                             />
                                         </div>
                                     </div>
@@ -1469,8 +1525,8 @@
                                     </div>
 
                                     <div style={{ marginTop: '2rem' }}>
-                                        <button type="submit" className="btn" disabled={isLoading}>
-                                            {isLoading ? '💾 Saving...' : 'Submit Reading'}
+                                        <button type="submit" className="btn" disabled={isSaving}>
+                                            {isSaving ? '💾 Saving...' : 'Submit Reading'}
                                         </button>
                                     </div>
                                 </form>
@@ -1481,38 +1537,38 @@
                             <div className="form-section">
                                 <h2>Load History</h2>
                                 {history.length > 0 ? (
-                                    <table className="history-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Date</th>
-                                                <th>Time Slot</th>
-                                                <th>Entry Time</th>
-                                                <th>PTR</th>
-                                                <th>Load (MW)</th>
-                                                <th>HV Amps</th>
-                                                <th>User</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {history.map(entry => (
-                                                <tr key={entry.id}>
-                                                    <td>{entry.date}</td>
-                                                    <td style={{ fontWeight: '600', color: 'var(--accent-yellow)' }}>{entry.time} Hrs</td>
-                                                    <td>{entry.entryTime}</td>
-                                                    <td>{entry.ptrName || ptrs.find(p => p.id === entry.ptr)?.name}</td>
-                                                    <td style={{ fontWeight: '600', color: 'var(--accent-blue)' }}>
-                                                        {entry.mw.toFixed(1)}
-                                                    </td>
-                                                    <td style={{ fontWeight: '600', color: 'var(--accent-green)' }}>
-                                                        {entry.amps.toFixed(1)}
-                                                    </td>
-                                                    <td style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                        {entry.user || '-'}
-                                                    </td>
+                                    <div className="history-table">
+                                        <table style={{ width: '100%' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Time</th>
+                                                    <th>PTR</th>
+                                                    <th>MW</th>
+                                                    <th>Amps</th>
+                                                    <th>User</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody>
+                                                {history.map(entry => (
+                                                    <tr key={entry.id}>
+                                                        <td style={{ fontSize: '0.8rem' }}>{entry.date}</td>
+                                                        <td style={{ fontWeight: '600', color: 'var(--accent-yellow)', fontSize: '0.8rem' }}>{entry.time}</td>
+                                                        <td style={{ fontSize: '0.8rem' }}>{entry.ptrName || ptrs.find(p => p.id === entry.ptr)?.name}</td>
+                                                        <td style={{ fontWeight: '600', color: 'var(--accent-blue)', fontSize: '0.8rem' }}>
+                                                            {entry.mw.toFixed(1)}
+                                                        </td>
+                                                        <td style={{ fontWeight: '600', color: 'var(--accent-green)', fontSize: '0.8rem' }}>
+                                                            {entry.amps.toFixed(1)}
+                                                        </td>
+                                                        <td style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                            {entry.user || '-'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 ) : (
                                     <div className="alert warning">
                                         No historical data available. Start by entering load readings.
@@ -1523,24 +1579,25 @@
 
                         {activeTab === 'settings' && (
                             <div className="form-section">
-                                <h2>Google Sheets Backup Configuration</h2>
+                                <h2>Google Sheets Configuration</h2>
                                 
                                 <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(0, 212, 255, 0.1)', border: '2px solid var(--accent-blue)', borderRadius: '8px' }}>
                                     <div style={{ fontSize: '0.9rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>
-                                        📌 How Hybrid Storage Works
+                                        ☁️ Real-Time Cross-Device Sync
                                     </div>
                                     <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-                                        <strong style={{ color: 'var(--text-primary)' }}>Primary Storage:</strong> Cloud storage (instant sync across all devices)<br/>
-                                        <strong style={{ color: 'var(--text-primary)' }}>Optional Backup:</strong> Google Sheets (for reports, Excel exports, auditing)<br/><br/>
-                                        All data is accessible from any device regardless of Google Sheets configuration.
+                                        Configure Google Sheets to enable automatic data sync across all devices. When configured:<br/>
+                                        ✅ Data automatically loads from Google Sheets when you open the app<br/>
+                                        ✅ Click "Refresh from Cloud" to get latest updates<br/>
+                                        ✅ All devices share the same data in real-time
                                     </div>
                                 </div>
                                 
                                 {isConfigured ? (
                                     <div>
                                         <div className="alert">
-                                            <strong>✓ Google Sheets Backup Enabled</strong><br/>
-                                            Data is being backed up to Google Sheets in the background.
+                                            <strong>✓ Real-Time Sync Active</strong><br/>
+                                            Data automatically syncs to/from Google Sheets across all devices.
                                         </div>
                                         
                                         <div style={{ marginTop: '2rem', padding: '1rem', background: 'rgba(10, 14, 26, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px' }}>
@@ -1553,7 +1610,7 @@
                                         <div style={{ marginTop: '2rem' }}>
                                             <button 
                                                 onClick={() => {
-                                                    if (confirm('Disconnect Google Sheets backup? (Cloud storage will continue working)')) {
+                                                    if (confirm('Disconnect Google Sheets? Data will only be saved locally.')) {
                                                         localStorage.removeItem('google_sheets_url');
                                                         setGoogleSheetsUrl('');
                                                         setIsConfigured(false);
@@ -1578,9 +1635,9 @@
                                     </div>
                                 ) : (
                                     <div>
-                                        <div className="alert warning">
-                                            <strong>⚠ Google Sheets Backup Not Configured</strong><br/>
-                                            Data is saved to cloud storage only. Configure Google Sheets for additional backup.
+                                        <div className="alert error">
+                                            <strong>⚠ Real-Time Sync Disabled</strong><br/>
+                                            Data is only saved locally. Configure Google Sheets for cross-device sync.
                                         </div>
                                         
                                         <div style={{ marginTop: '2rem' }}>
@@ -1601,15 +1658,17 @@
                                                         if (googleSheetsUrl.trim()) {
                                                             localStorage.setItem('google_sheets_url', googleSheetsUrl.trim());
                                                             setIsConfigured(true);
-                                                            setSyncStatus('✓ Google Sheets backup enabled');
+                                                            setSyncStatus('✓ Real-time sync enabled');
                                                             setTimeout(() => setSyncStatus(''), 3000);
+                                                            // Reload data from Google Sheets
+                                                            loadData(selectedDate);
                                                         } else {
                                                             alert('Please enter a valid Google Apps Script URL');
                                                         }
                                                     }}
                                                     className="btn"
                                                 >
-                                                    Enable Google Sheets Backup
+                                                    Enable Real-Time Sync
                                                 </button>
                                             </div>
                                         </div>
@@ -1621,9 +1680,10 @@
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.8' }}>
                                                 <strong style={{ color: 'var(--text-primary)' }}>Step 1:</strong> Create a new Google Sheet<br/>
                                                 <strong style={{ color: 'var(--text-primary)' }}>Step 2:</strong> Go to Extensions → Apps Script<br/>
-                                                <strong style={{ color: 'var(--text-primary)' }}>Step 3:</strong> Paste the Google Apps Script code<br/>
-                                                <strong style={{ color: 'var(--text-primary)' }}>Step 4:</strong> Deploy as Web App<br/>
-                                                <strong style={{ color: 'var(--text-primary)' }}>Step 5:</strong> Copy the Web App URL and paste it above
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 3:</strong> Copy the code from google-apps-script.js and paste it<br/>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 4:</strong> Deploy as Web App (Anyone can access)<br/>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 5:</strong> Copy the Web App URL and paste it above<br/>
+                                                <strong style={{ color: 'var(--text-primary)' }}>Step 6:</strong> Use the SAME URL on all devices
                                             </div>
                                         </div>
                                     </div>
