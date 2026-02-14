@@ -674,7 +674,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         const PTRMonitoringApp = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -689,6 +689,7 @@
             const [googleSheetsUrl, setGoogleSheetsUrl] = useState('');
             const [isConfigured, setIsConfigured] = useState(false);
             const [syncStatus, setSyncStatus] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
 
             const [activeTab, setActiveTab] = useState('dashboard');
             const [currentTime, setCurrentTime] = useState(new Date());
@@ -769,9 +770,22 @@
             }, [selectedDate, isAuthenticated]);
 
             const loadData = async (date) => {
+                setIsLoading(true);
                 const storageKey = `readings_${date}`;
                 
-                // Load from localStorage
+                // Try to load from Google Sheets first if configured
+                if (isConfigured && googleSheetsUrl) {
+                    const sheetsData = await loadFromGoogleSheets(date);
+                    if (sheetsData) {
+                        setReadings(sheetsData);
+                        // Save to localStorage as cache
+                        localStorage.setItem(storageKey, JSON.stringify(sheetsData));
+                        setIsLoading(false);
+                        return;
+                    }
+                }
+                
+                // Fallback to localStorage
                 try {
                     const readingsData = localStorage.getItem(storageKey);
                     const historyData = localStorage.getItem('ptr_history');
@@ -800,51 +814,63 @@
                     });
                 }
                 
-                // If Google Sheets is configured, try to load from there
-                if (isConfigured && googleSheetsUrl) {
-                    loadFromGoogleSheets(date);
-                }
+                setIsLoading(false);
             };
 
             const loadFromGoogleSheets = (date) => {
-                if (!googleSheetsUrl) return;
-                
-                setSyncStatus('Loading from Google Sheets...');
-                
-                // Create script element for JSONP
-                const script = document.createElement('script');
-                const callbackName = 'googleSheetsCallback_' + Date.now();
-                
-                // Define callback function
-                window[callbackName] = function(response) {
-                    if (response.status === 'success' && response.data) {
-                        const loadedReadings = response.data;
-                        setReadings(loadedReadings);
-                        
-                        // Save to localStorage as cache
-                        const storageKey = `readings_${date}`;
-                        localStorage.setItem(storageKey, JSON.stringify(loadedReadings));
-                        
-                        setSyncStatus('✓ Loaded from Google Sheets');
-                        setTimeout(() => setSyncStatus(''), 3000);
-                    } else {
-                        setSyncStatus('');
+                return new Promise((resolve) => {
+                    if (!googleSheetsUrl) {
+                        resolve(null);
+                        return;
                     }
                     
-                    // Cleanup
-                    document.body.removeChild(script);
-                    delete window[callbackName];
-                };
-                
-                // Make request
-                script.src = `${googleSheetsUrl}?action=getReadings&date=${date}&callback=${callbackName}`;
-                script.onerror = () => {
-                    setSyncStatus('');
-                    document.body.removeChild(script);
-                    delete window[callbackName];
-                };
-                
-                document.body.appendChild(script);
+                    setSyncStatus('Loading from Google Sheets...');
+                    
+                    // Create script element for JSONP
+                    const script = document.createElement('script');
+                    const callbackName = 'googleSheetsCallback_' + Date.now();
+                    
+                    // Timeout after 10 seconds
+                    const timeout = setTimeout(() => {
+                        setSyncStatus('');
+                        document.body.removeChild(script);
+                        delete window[callbackName];
+                        resolve(null);
+                    }, 10000);
+                    
+                    // Define callback function
+                    window[callbackName] = function(response) {
+                        clearTimeout(timeout);
+                        
+                        if (response.status === 'success' && response.data) {
+                            setSyncStatus('✓ Loaded from Google Sheets');
+                            setTimeout(() => setSyncStatus(''), 3000);
+                            
+                            // Cleanup
+                            document.body.removeChild(script);
+                            delete window[callbackName];
+                            
+                            resolve(response.data);
+                        } else {
+                            setSyncStatus('');
+                            document.body.removeChild(script);
+                            delete window[callbackName];
+                            resolve(null);
+                        }
+                    };
+                    
+                    // Make request
+                    script.src = `${googleSheetsUrl}?action=getReadings&date=${date}&callback=${callbackName}`;
+                    script.onerror = () => {
+                        clearTimeout(timeout);
+                        setSyncStatus('');
+                        document.body.removeChild(script);
+                        delete window[callbackName];
+                        resolve(null);
+                    };
+                    
+                    document.body.appendChild(script);
+                });
             };
 
             const loadHistoryFromGoogleSheets = () => {
@@ -879,9 +905,12 @@
                 document.body.appendChild(script);
             };
 
-            const refreshData = () => {
-                loadData(selectedDate);
-                loadHistoryFromGoogleSheets();
+            const refreshData = async () => {
+                setSyncStatus('🔄 Refreshing...');
+                await loadData(selectedDate);
+                if (isConfigured) {
+                    loadHistoryFromGoogleSheets();
+                }
             };
 
             const saveData = async (storageKey, newReadings, newHistory) => {
@@ -969,7 +998,7 @@
                 setFormData(prev => ({ ...prev, [name]: value }));
             };
 
-            const handleSubmit = (e) => {
+            const handleSubmit = async (e) => {
                 e.preventDefault();
                 const mwValue = parseFloat(formData.mw);
                 const ampsValue = parseFloat(formData.amps);
@@ -1027,17 +1056,16 @@
                 // Update state
                 setHistory(newHistory);
                 
-                // Update readings state regardless of selected date
-                // This ensures the dashboard shows the latest data
-                setReadings(dateReadings);
+                // Save to Google Sheets FIRST
+                await saveToGoogleSheets(newEntry, ptrInfo.name);
                 
-                // If entering data for a different date, switch to that date on dashboard
-                if (formData.date !== selectedDate) {
+                // If entering data for the selected date, update readings immediately
+                if (formData.date === selectedDate) {
+                    setReadings(dateReadings);
+                } else {
+                    // If entering data for a different date, switch to that date
                     setSelectedDate(formData.date);
                 }
-                
-                // Save to Google Sheets
-                saveToGoogleSheets(newEntry, ptrInfo.name);
 
                 setFormData(prev => ({ ...prev, mw: '', amps: '' }));
                 
@@ -1276,7 +1304,6 @@
                             className={`tab ${activeTab === 'entry' ? 'active' : ''}`}
                             onClick={() => {
                                 setActiveTab('entry');
-                                // Sync form date with currently selected date
                                 setFormData(prev => ({ ...prev, date: selectedDate }));
                             }}
                         >
@@ -1298,7 +1325,7 @@
 
                     {activeTab === 'dashboard' && (
                         <>
-                            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(21, 27, 46, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px' }}>
+                            <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(21, 27, 46, 0.8)', border: '2px solid var(--border-color)', borderRadius: '8px', flexWrap: 'wrap' }}>
                                 <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                                     View Date:
                                 </label>
@@ -1316,31 +1343,31 @@
                                         fontSize: '0.9rem' 
                                     }}
                                 />
-                                <div style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--accent-blue)' }}>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)' }}>
                                     Viewing: {new Date(selectedDate).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                 </div>
-                                {isConfigured && (
-                                    <button 
-                                        onClick={refreshData}
-                                        style={{
-                                            padding: '0.75rem 1.5rem',
-                                            background: 'rgba(0, 212, 255, 0.2)',
-                                            border: '2px solid var(--accent-blue)',
-                                            color: 'var(--accent-blue)',
-                                            fontFamily: 'JetBrains Mono, monospace',
-                                            fontSize: '0.8rem',
-                                            fontWeight: '600',
-                                            textTransform: 'uppercase',
-                                            cursor: 'pointer',
-                                            borderRadius: '4px',
-                                            transition: 'all 0.3s ease'
-                                        }}
-                                        onMouseOver={(e) => e.target.style.background = 'var(--accent-blue)'}
-                                        onMouseOut={(e) => e.target.style.background = 'rgba(0, 212, 255, 0.2)'}
-                                    >
-                                        🔄 Refresh Data
-                                    </button>
-                                )}
+                                <button 
+                                    onClick={refreshData}
+                                    disabled={isLoading}
+                                    style={{
+                                        padding: '0.75rem 1.5rem',
+                                        background: isLoading ? 'rgba(0, 212, 255, 0.1)' : 'rgba(0, 212, 255, 0.2)',
+                                        border: '2px solid var(--accent-blue)',
+                                        color: 'var(--accent-blue)',
+                                        fontFamily: 'JetBrains Mono, monospace',
+                                        fontSize: '0.8rem',
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase',
+                                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                                        borderRadius: '4px',
+                                        transition: 'all 0.3s ease',
+                                        marginLeft: 'auto'
+                                    }}
+                                    onMouseOver={(e) => !isLoading && (e.target.style.background = 'var(--accent-blue)')}
+                                    onMouseOut={(e) => !isLoading && (e.target.style.background = 'rgba(0, 212, 255, 0.2)')}
+                                >
+                                    {isLoading ? '⏳ Loading...' : '🔄 Refresh Data'}
+                                </button>
                             </div>
 
                             <div className="ptr-grid">
