@@ -759,8 +759,13 @@
                 if (!isAuthenticated) return;
                 
                 const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-                loadData(selectedDate);
                 return () => clearInterval(timer);
+            }, [isAuthenticated]);
+            
+            // Load data when selected date changes
+            useEffect(() => {
+                if (!isAuthenticated) return;
+                loadData(selectedDate);
             }, [selectedDate, isAuthenticated]);
 
             const loadData = async (date) => {
@@ -975,8 +980,32 @@
                 }
 
                 const storageKey = `readings_${formData.date}`;
-                const newReadings = { ...readings };
-                newReadings[formData.ptr][formData.time] = { mw: mwValue, amps: ampsValue };
+                
+                // Load existing readings for this date or create new
+                let dateReadings;
+                try {
+                    const existingData = localStorage.getItem(storageKey);
+                    if (existingData) {
+                        dateReadings = JSON.parse(existingData);
+                    } else {
+                        dateReadings = {
+                            ptr1_220: initialReadings(),
+                            ptr2_220: initialReadings(),
+                            ptr1_132: initialReadings(),
+                            ptr2_132: initialReadings()
+                        };
+                    }
+                } catch (error) {
+                    dateReadings = {
+                        ptr1_220: initialReadings(),
+                        ptr2_220: initialReadings(),
+                        ptr1_132: initialReadings(),
+                        ptr2_132: initialReadings()
+                    };
+                }
+                
+                // Update the specific PTR and time slot
+                dateReadings[formData.ptr][formData.time] = { mw: mwValue, amps: ampsValue };
 
                 const ptrInfo = ptrs.find(p => p.id === formData.ptr);
                 const newEntry = {
@@ -991,14 +1020,33 @@
 
                 const newHistory = [newEntry, ...history].slice(0, 100);
 
-                setReadings(newReadings);
+                // Save to localStorage
+                localStorage.setItem(storageKey, JSON.stringify(dateReadings));
+                localStorage.setItem('ptr_history', JSON.stringify(newHistory));
+                
+                // Update state
                 setHistory(newHistory);
-                saveData(storageKey, newReadings, newHistory);
+                
+                // Update readings state regardless of selected date
+                // This ensures the dashboard shows the latest data
+                setReadings(dateReadings);
+                
+                // If entering data for a different date, switch to that date on dashboard
+                if (formData.date !== selectedDate) {
+                    setSelectedDate(formData.date);
+                }
                 
                 // Save to Google Sheets
                 saveToGoogleSheets(newEntry, ptrInfo.name);
 
                 setFormData(prev => ({ ...prev, mw: '', amps: '' }));
+                
+                // Switch to dashboard to show the updated data
+                setActiveTab('dashboard');
+                
+                // Show success message
+                setSyncStatus('✓ Data saved successfully!');
+                setTimeout(() => setSyncStatus(''), 3000);
             };
 
             const getLoadStatus = (amps, ratedAmps) => {
@@ -1226,7 +1274,11 @@
                         </button>
                         <button 
                             className={`tab ${activeTab === 'entry' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('entry')}
+                            onClick={() => {
+                                setActiveTab('entry');
+                                // Sync form date with currently selected date
+                                setFormData(prev => ({ ...prev, date: selectedDate }));
+                            }}
                         >
                             Data Entry
                         </button>
@@ -1308,6 +1360,16 @@
                     {activeTab === 'entry' && (
                         <div className="form-section">
                             <h2>Enter Load Reading</h2>
+                            
+                            <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0, 212, 255, 0.1)', border: '2px solid var(--accent-blue)', borderRadius: '8px' }}>
+                                <div style={{ fontSize: '0.85rem', color: 'var(--accent-blue)', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                    📋 Entering data for: {new Date(formData.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                    After submitting, you'll be automatically taken to the Dashboard to see your updated readings.
+                                </div>
+                            </div>
+                            
                             <form onSubmit={handleSubmit}>
                                 <div className="form-grid">
                                     <div className="form-group">
