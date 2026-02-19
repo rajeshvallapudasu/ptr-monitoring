@@ -3,275 +3,693 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PTR Monitoring Dashboard - FIXED | TGTRANSCO</title>
+    <title>PTR Load Monitoring - Huzurnagar S/S | TGTRANSCO</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-card: #334155;
-            --accent-primary: #3b82f6;
-            --accent-success: #10b981;
-            --accent-warning: #f59e0b;
-            --accent-danger: #ef4444;
-            --text-primary: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border: #475569;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        :root {
+            --primary-dark: #0a0e1a;
+            --secondary-dark: #151b2e;
+            --accent-blue: #00d4ff;
+            --accent-yellow: #ffd600;
+            --accent-orange: #ff8c00;
+            --accent-red: #ff3838;
+            --accent-green: #00ff88;
+            --text-primary: #e8edf4;
+            --text-secondary: #8b9bb4;
+            --border-color: #2a3548;
+            --grid-color: rgba(0, 212, 255, 0.1);
+        }
+
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.6;
+            position: relative;
+            overflow-x: hidden;
         }
-        .topbar {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 1rem 2rem;
-            position: sticky;
+
+        /* Animated grid background */
+        body::before {
+            content: '';
+            position: fixed;
             top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, var(--grid-color) 0px, transparent 1px, transparent 40px),
+                repeating-linear-gradient(90deg, var(--grid-color) 0px, transparent 1px, transparent 40px);
+            pointer-events: none;
+            z-index: 0;
+            animation: gridPulse 4s ease-in-out infinite;
         }
-        .topbar-content {
-            max-width: 1800px;
+
+        @keyframes gridPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Login Screen */
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+            padding: 2rem;
+        }
+
+        .login-container {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(255, 214, 0, 0.05) 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
+            animation: scanline 3s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-logo {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(0, 212, 255, 0.5); }
+            50% { text-shadow: 0 0 40px rgba(0, 212, 255, 0.8); }
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .login-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: rgba(10, 14, 26, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+            background: rgba(10, 14, 26, 0.8);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 1rem;
+            background: var(--accent-blue);
+            border: none;
+            border-radius: 4px;
+            color: var(--primary-dark);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-login:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+        }
+
+        .alert-error {
+            padding: 1rem;
+            background: rgba(255, 56, 56, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 4px;
+            color: var(--accent-red);
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Dashboard */
+        .container {
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(255, 214, 0, 0.05) 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
+            animation: scanline 3s linear infinite;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .user-info-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            padding: 1rem 2rem;
+            background: rgba(21, 27, 46, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 2rem;
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
             gap: 1rem;
         }
-        .topbar-left h1 {
-            font-size: 1.5rem;
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-weight: 700;
+            font-size: 1rem;
+            border: 2px solid var(--accent-blue);
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
             color: var(--text-primary);
+            font-size: 0.9rem;
         }
-        .topbar-subtitle {
+
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .btn-logout {
+            padding: 0.5rem 1.5rem;
+            background: transparent;
+            border: 1px solid var(--accent-red);
+            border-radius: 4px;
+            color: var(--accent-red);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: var(--accent-red);
+            color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 56, 56, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(21, 27, 46, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            flex-wrap: wrap;
+        }
+
+        .date-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .date-control label {
             font-size: 0.875rem;
-            color: var(--text-muted);
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
         }
-        .status-indicator {
+
+        .date-input {
+            padding: 0.625rem 1rem;
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+        }
+
+        .btn-refresh {
+            padding: 0.625rem 1.5rem;
+            background: var(--accent-blue);
+            border: none;
+            border-radius: 4px;
+            color: var(--primary-dark);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .btn-refresh:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-refresh:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            transition: 0.4s;
+            border-radius: 26px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+
+        .status-badge {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             padding: 0.5rem 1rem;
-            background: var(--bg-card);
-            border-radius: 8px;
-            border: 1px solid var(--border);
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-green);
+            border-radius: 4px;
         }
+
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: var(--accent-success);
+            background: var(--accent-green);
             animation: pulse 2s infinite;
         }
+
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-green); }
+            50% { opacity: 0.6; box-shadow: 0 0 20px var(--accent-green); }
         }
-        .control-panel {
-            background: var(--bg-secondary);
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--border);
+
+        .ptr-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin-bottom: 2rem;
         }
-        .control-content {
-            max-width: 1800px;
-            margin: 0 auto;
+
+        .ptr-card {
+            background: linear-gradient(135deg, rgba(21, 27, 46, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            padding: 2rem;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .ptr-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-blue);
+            transition: all 0.3s;
+        }
+
+        .ptr-card.warning::before { background: var(--accent-yellow); }
+        .ptr-card.critical::before { background: var(--accent-red); }
+
+        .ptr-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-blue);
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.2);
+        }
+
+        .ptr-header-section {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .btn {
-            padding: 0.625rem 1.5rem;
-            background: var(--accent-primary);
-            border: none;
-            color: white;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 0.875rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-        .btn-secondary {
-            background: var(--bg-card);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-        .btn-secondary:hover {
-            background: var(--border);
-        }
-        .date-input {
-            padding: 0.625rem 1rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 0.875rem;
-        }
-        .main-content {
-            max-width: 1800px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        .alert {
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
             margin-bottom: 1.5rem;
-            border-left: 4px solid;
-            font-size: 0.875rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
         }
-        .alert.info {
-            background: rgba(59, 130, 246, 0.1);
-            border-left-color: var(--accent-primary);
-            color: var(--text-secondary);
-        }
-        .alert.warning {
-            background: rgba(245, 158, 11, 0.1);
-            border-left-color: var(--accent-warning);
-            color: var(--accent-warning);
-        }
-        .alert.error {
-            background: rgba(239, 68, 68, 0.1);
-            border-left-color: var(--accent-danger);
-            color: var(--accent-danger);
-        }
-        .alert.success {
-            background: rgba(16, 185, 129, 0.1);
-            border-left-color: var(--accent-success);
-            color: var(--accent-success);
-        }
-        .debug-panel {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .debug-title {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--accent-primary);
-        }
-        .debug-log {
-            font-family: 'Courier New', monospace;
-            font-size: 0.75rem;
-            background: var(--bg-primary);
-            padding: 1rem;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .stat-card {
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-        }
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin: 0.5rem 0;
-        }
-        .stat-subtitle {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-        }
-        .stat-progress {
-            width: 100%;
-            height: 6px;
-            background: var(--bg-primary);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .stat-progress-bar {
-            height: 100%;
-            transition: width 0.5s ease;
-            border-radius: 3px;
-        }
-        .stat-progress-bar.normal { background: var(--accent-success); }
-        .stat-progress-bar.warning { background: var(--accent-warning); }
-        .stat-progress-bar.critical { background: var(--accent-danger); }
-        .ptr-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-            gap: 2rem;
-        }
-        .ptr-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border-left: 4px solid var(--accent-primary);
-        }
-        .ptr-card.warning { border-left-color: var(--accent-warning); }
-        .ptr-card.critical { border-left-color: var(--accent-danger); }
+
         .ptr-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
-        .readings-grid {
+
+        .ptr-specs {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .ptr-status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ptr-status-badge.normal {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .ptr-status-badge.warning {
+            background: rgba(255, 214, 0, 0.2);
+            color: var(--accent-yellow);
+            border: 1px solid var(--accent-yellow);
+        }
+
+        .ptr-status-badge.critical {
+            background: rgba(255, 56, 56, 0.2);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+
+        .ptr-peak-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(0, 212, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .peak-value {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .peak-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .peak-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .loading-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-fill {
+            height: 100%;
+            transition: width 0.5s ease, background 0.3s;
+            border-radius: 4px;
+        }
+
+        .loading-fill.normal { background: linear-gradient(90deg, var(--accent-green), var(--accent-blue)); }
+        .loading-fill.warning { background: linear-gradient(90deg, var(--accent-yellow), var(--accent-orange)); }
+        .loading-fill.critical { background: linear-gradient(90deg, var(--accent-red), var(--accent-orange)); }
+
+        .loading-text {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        .time-slots {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
         }
-        .reading-block {
-            background: var(--bg-card);
+
+        .time-slot {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
             padding: 1rem;
-            border-radius: 8px;
-            border: 1px solid var(--border);
+            transition: all 0.3s;
         }
-        .reading-time {
-            font-size: 0.75rem;
+
+        .time-slot:hover {
+            border-color: var(--accent-blue);
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .time-slot-header {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
         }
-        .reading-value {
+
+        .time-slot-values {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 0.25rem;
+            align-items: baseline;
         }
-        .reading-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
+
+        .slot-value {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .reading-number {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--text-primary);
+
+        .value-number {
+            font-size: 1.2rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
         }
+
+        .value-number.active { color: var(--accent-green); }
+        .value-number.inactive { color: var(--text-secondary); }
+
+        .value-unit {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 1024px) {
+            .ptr-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
-            .ptr-grid { grid-template-columns: 1fr; }
-            .stats-grid { grid-template-columns: 1fr; }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .time-slots {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -281,13 +699,133 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        function Dashboard() {
+        // User credentials
+        const USERS = [
+            { username: 'admin', password: 'admin@123', name: 'Administrator', role: 'Admin' },
+            { username: 'engineer', password: 'engineer@123', name: 'Engineer', role: 'Engineer' },
+            { username: 'operator', password: 'operator@123', name: 'Operator', role: 'Operator' },
+            { username: 'viewer', password: 'viewer@123', name: 'Viewer', role: 'Viewer' }
+        ];
+
+        // API Configuration
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyNpzhP6mB1VlqWoKlsW05oHaQ5o24LyD_uYgO_gViaPrk8SU6G49Gytn2koSTq2A3B/exec';
+        // Replace with: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'
+
+        function App() {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [currentUser, setCurrentUser] = useState(null);
+
+            useEffect(() => {
+                const session = sessionStorage.getItem('ptr_session');
+                if (session) {
+                    try {
+                        const user = JSON.parse(session);
+                        setCurrentUser(user);
+                        setIsAuthenticated(true);
+                    } catch (error) {
+                        sessionStorage.removeItem('ptr_session');
+                    }
+                }
+            }, []);
+
+            const handleLogin = (user) => {
+                setCurrentUser(user);
+                setIsAuthenticated(true);
+                sessionStorage.setItem('ptr_session', JSON.stringify(user));
+            };
+
+            const handleLogout = () => {
+                setCurrentUser(null);
+                setIsAuthenticated(false);
+                sessionStorage.removeItem('ptr_session');
+            };
+
+            if (!isAuthenticated) {
+                return <LoginScreen onLogin={handleLogin} />;
+            }
+
+            return <Dashboard user={currentUser} onLogout={handleLogout} />;
+        }
+
+        function LoginScreen({ onLogin }) {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError('');
+                setLoading(true);
+
+                setTimeout(() => {
+                    const user = USERS.find(u => u.username === username && u.password === password);
+                    
+                    if (user) {
+                        onLogin(user);
+                    } else {
+                        setError('Invalid username or password. Please try again.');
+                        setLoading(false);
+                    }
+                }, 600);
+            };
+
+            return (
+                <div className="login-wrapper">
+                    <div className="login-container">
+                        <div className="login-header">
+                            <div className="login-logo">⚡</div>
+                            <h1 className="login-title">PTR Monitoring</h1>
+                            <p className="login-subtitle">220/132/33 KV Substation - Huzurnagar | TGTRANSCO</p>
+                        </div>
+
+                        {error && (
+                            <div className="alert-error">
+                                <strong>⚠️ Authentication Failed</strong><br/>{error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Username</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    placeholder="Enter your username"
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <input
+                                    type="password"
+                                    className="form-input"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Enter your password"
+                                    required
+                                />
+                            </div>
+
+                            <button type="submit" className="btn-login" disabled={loading}>
+                                {loading ? 'Authenticating...' : 'Sign In'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        function Dashboard({ user, onLogout }) {
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [readings, setReadings] = useState(null);
             const [loading, setLoading] = useState(false);
-            const [apiUrl, setApiUrl] = useState('');
-            const [debugLog, setDebugLog] = useState([]);
-            const [showDebug, setShowDebug] = useState(true);
+            const [lastUpdate, setLastUpdate] = useState(null);
+            const [autoRefresh, setAutoRefresh] = useState(true);
 
             const ptrs = [
                 { id: 'ptr1_220', name: 'PTR-1', voltage: '220/132 KV', capacity: 100, rated: 262 },
@@ -298,122 +836,33 @@
 
             const timeSlots = ['06:30', '07:00', '07:30', '08:00', '15:30', '16:00', '16:30', '17:00'];
 
-            const log = (message, type = 'info') => {
-                const timestamp = new Date().toLocaleTimeString();
-                const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
-                console.log(logEntry);
-                setDebugLog(prev => [...prev, logEntry].slice(-20));
-            };
+            useEffect(() => {
+                loadData();
+            }, [selectedDate]);
 
             useEffect(() => {
-                const saved = localStorage.getItem('ptr_api_url');
-                if (saved) {
-                    setApiUrl(saved);
-                    log('API URL loaded from storage');
-                } else {
-                    log('No API URL configured', 'warning');
-                }
-            }, []);
-
-            useEffect(() => {
-                if (apiUrl) {
-                    loadData();
-                }
-            }, [selectedDate, apiUrl]);
-
-            const testApiConnection = async () => {
-                if (!apiUrl) {
-                    alert('Please configure API URL first');
-                    return;
-                }
-
-                log('Testing API connection...');
-                setLoading(true);
-
-                try {
-                    // Test with ?action=test
-                    const testUrl = `${apiUrl}?action=test`;
-                    log(`Testing URL: ${testUrl}`);
-
-                    const response = await fetch(testUrl);
-                    const text = await response.text();
-                    
-                    log(`Response received: ${text.substring(0, 200)}`);
-                    
-                    try {
-                        const data = JSON.parse(text);
-                        if (data.status === 'success') {
-                            log('✓ API Connection Successful!', 'success');
-                            alert('✓ API Connection Successful!\n\nYour Google Apps Script is working correctly.');
-                        } else {
-                            log(`API returned: ${JSON.stringify(data)}`, 'warning');
-                            alert('API responded but with unexpected data. Check debug log.');
-                        }
-                    } catch (e) {
-                        log(`Failed to parse response as JSON: ${e.message}`, 'error');
-                        alert('API responded but not with valid JSON. Check debug log.');
-                    }
-                } catch (error) {
-                    log(`✗ Connection failed: ${error.message}`, 'error');
-                    alert(`✗ Connection Failed!\n\n${error.message}\n\nCheck:\n1. API URL is correct\n2. Script is deployed\n3. "Anyone" has access`);
-                } finally {
-                    setLoading(false);
-                }
-            };
+                if (!autoRefresh) return;
+                const interval = setInterval(() => loadData(), 30000);
+                return () => clearInterval(interval);
+            }, [autoRefresh, selectedDate]);
 
             const loadData = async () => {
-                if (!apiUrl) {
-                    log('Cannot load data: No API URL', 'warning');
-                    return;
-                }
+                if (!API_URL || API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') return;
 
-                log(`Loading data for ${selectedDate}...`);
                 setLoading(true);
-
                 try {
-                    const url = `${apiUrl}?action=getReadings&date=${selectedDate}`;
-                    log(`Fetching: ${url}`);
-
+                    const url = `${API_URL}?action=getReadings&date=${selectedDate}`;
                     const response = await fetch(url);
-                    log(`Response status: ${response.status}`);
-                    
-                    const text = await response.text();
-                    log(`Response text (first 200 chars): ${text.substring(0, 200)}`);
-
-                    const data = JSON.parse(text);
-                    log(`Parsed data: ${JSON.stringify(data).substring(0, 200)}`);
+                    const data = await response.json();
 
                     if (data.status === 'success') {
-                        log('✓ Data loaded successfully');
                         setReadings(data.data);
-                        
-                        // Count non-zero readings
-                        let count = 0;
-                        Object.values(data.data).forEach(ptr => {
-                            Object.values(ptr).forEach(reading => {
-                                if (reading.mw > 0 || reading.amps > 0) count++;
-                            });
-                        });
-                        log(`Found ${count} non-zero readings`);
-                    } else {
-                        log(`API returned status: ${data.status}`, 'warning');
+                        setLastUpdate(new Date());
                     }
                 } catch (error) {
-                    log(`✗ Error loading data: ${error.message}`, 'error');
-                    console.error('Full error:', error);
+                    console.error('Error loading data:', error);
                 } finally {
                     setLoading(false);
-                }
-            };
-
-            const saveApiUrl = () => {
-                const url = prompt('Enter your Google Apps Script Web App URL:', apiUrl);
-                if (url) {
-                    const trimmed = url.trim();
-                    localStorage.setItem('ptr_api_url', trimmed);
-                    setApiUrl(trimmed);
-                    log(`API URL saved: ${trimmed.substring(0, 50)}...`);
-                    alert('API URL saved! Click "Test API" to verify connection.');
                 }
             };
 
@@ -435,167 +884,148 @@
             };
 
             const getLoadingPercent = (amps, rated) => {
-                return Math.min(((amps / rated) * 100), 100).toFixed(1);
+                return Math.min(((amps / rated) * 100), 100);
             };
 
-            if (!apiUrl) {
-                return (
-                    <div>
-                        <div className="topbar">
-                            <div className="topbar-content">
-                                <div className="topbar-left">
-                                    <h1>PTR Monitoring Dashboard</h1>
-                                    <div className="topbar-subtitle">TGTRANSCO - Huzurnagar Substation</div>
-                                </div>
+            const getUserInitials = (name) => {
+                return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>PTR LOAD MONITORING</h1>
+                        <p>220/132/33 KV Substation - Huzurnagar | TGTRANSCO</p>
+                    </div>
+
+                    <div className="user-info-bar">
+                        <div className="user-badge">
+                            <div className="user-avatar">{getUserInitials(user.name)}</div>
+                            <div className="user-details">
+                                <div className="user-name">{user.name}</div>
+                                <div className="user-role">{user.role}</div>
                             </div>
                         </div>
-                        <div className="main-content">
-                            <div className="alert warning">
-                                <strong>⚠️ API Not Configured</strong><br/>
-                                Please configure your Google Apps Script Web App URL to start monitoring.
+                        <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                            <div className="status-badge">
+                                <div className="status-dot"></div>
+                                <span style={{fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase'}}>
+                                    Live Monitoring
+                                </span>
                             </div>
-                            <button onClick={saveApiUrl} className="btn" style={{marginTop: '1rem'}}>
-                                Configure API URL
+                            <button className="btn-logout" onClick={onLogout}>
+                                Logout
                             </button>
                         </div>
                     </div>
-                );
-            }
 
-            return (
-                <div>
-                    <div className="topbar">
-                        <div className="topbar-content">
-                            <div className="topbar-left">
-                                <h1>PTR Monitoring Dashboard</h1>
-                                <div className="topbar-subtitle">220/132/33 KV Substation - Huzurnagar | TGTRANSCO</div>
-                            </div>
-                            <div className="status-indicator">
-                                <div className="status-dot"></div>
-                                <span>Live Monitoring</span>
-                            </div>
+                    <div className="controls">
+                        <div className="date-control">
+                            <label>Date</label>
+                            <input 
+                                type="date"
+                                className="date-input"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                            />
+                            <button className="btn-refresh" onClick={loadData} disabled={loading}>
+                                {loading ? '⟳ Loading...' : '🔄 Refresh'}
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="control-panel">
-                        <div className="control-content">
-                            <div style={{display: 'flex', gap: '1rem', alignItems: 'center'}}>
-                                <label style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>Date:</label>
+                        <div className="auto-refresh">
+                            <label className="switch">
                                 <input 
-                                    type="date"
-                                    className="date-input"
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    type="checkbox"
+                                    checked={autoRefresh}
+                                    onChange={(e) => setAutoRefresh(e.target.checked)}
                                 />
-                                <button className="btn" onClick={loadData} disabled={loading}>
-                                    {loading ? 'Loading...' : '🔄 Refresh'}
-                                </button>
-                                <button className="btn btn-secondary" onClick={testApiConnection}>
-                                    🔍 Test API
-                                </button>
-                                <button className="btn btn-secondary" onClick={saveApiUrl}>
-                                    ⚙️ Change API
-                                </button>
-                                <button className="btn btn-secondary" onClick={() => setShowDebug(!showDebug)}>
-                                    {showDebug ? 'Hide' : 'Show'} Debug
-                                </button>
-                            </div>
+                                <span className="slider"></span>
+                            </label>
+                            <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase'}}>
+                                Auto-Refresh (30s)
+                            </span>
                         </div>
+                        {lastUpdate && (
+                            <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
+                                Last Update: {lastUpdate.toLocaleTimeString('en-IN')}
+                            </div>
+                        )}
                     </div>
 
-                    <div className="main-content">
-                        {showDebug && (
-                            <div className="debug-panel">
-                                <div className="debug-title">Debug Log (Last 20 Messages)</div>
-                                <div className="debug-log">
-                                    {debugLog.length > 0 ? debugLog.join('\n') : 'No log messages yet. Click "Refresh" or "Test API" to generate logs.'}
-                                </div>
-                            </div>
-                        )}
+                    {readings && (
+                        <div className="ptr-grid">
+                            {ptrs.map(ptr => {
+                                const peakAmps = getPeakAmps(ptr.id);
+                                const peakMW = getPeakMW(ptr.id);
+                                const status = getStatus(peakAmps, ptr.rated);
+                                const loadingPct = getLoadingPercent(peakAmps, ptr.rated);
 
-                        {!readings && !loading && (
-                            <div className="alert info">
-                                <strong>ℹ️ No Data Loaded Yet</strong><br/>
-                                Click "Refresh" to load data from API, or click "Test API" to verify your connection.
-                            </div>
-                        )}
-
-                        {readings && (
-                            <>
-                                <div className="stats-grid">
-                                    {ptrs.map(ptr => {
-                                        const peakAmps = getPeakAmps(ptr.id);
-                                        const peakMW = getPeakMW(ptr.id);
-                                        const status = getStatus(peakAmps, ptr.rated);
-                                        const loading = getLoadingPercent(peakAmps, ptr.rated);
-
-                                        return (
-                                            <div key={ptr.id} className="stat-card">
-                                                <div style={{fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.5rem'}}>
-                                                    {ptr.name} ({ptr.voltage})
-                                                </div>
-                                                <div className="stat-value">{peakAmps.toFixed(1)} A</div>
-                                                <div className="stat-subtitle">{peakMW.toFixed(1)} MW Peak</div>
-                                                <div className="stat-progress">
-                                                    <div className={`stat-progress-bar ${status}`} style={{width: `${loading}%`}}></div>
-                                                </div>
-                                                <div style={{fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between'}}>
-                                                    <span>{loading}% Loading</span>
-                                                    <span>{ptr.rated}A Rated</span>
-                                                </div>
+                                return (
+                                    <div key={ptr.id} className={`ptr-card ${status}`}>
+                                        <div className="ptr-header-section">
+                                            <div>
+                                                <div className="ptr-title">{ptr.name}</div>
+                                                <div className="ptr-specs">{ptr.voltage} | {ptr.capacity} MVA | Rated: {ptr.rated}A</div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+                                            <div className={`ptr-status-badge ${status}`}>
+                                                {status === 'normal' ? '● Normal' : status === 'warning' ? '▲ Warning' : '✖ Critical'}
+                                            </div>
+                                        </div>
 
-                                <div style={{fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem', marginTop: '2rem'}}>
-                                    Detailed Readings
-                                </div>
+                                        <div className="ptr-peak-display">
+                                            <div className="peak-value">
+                                                <div className="peak-number">{peakAmps.toFixed(1)}</div>
+                                                <div className="peak-label">Peak Amps</div>
+                                            </div>
+                                            <div className="peak-value">
+                                                <div className="peak-number">{peakMW.toFixed(1)}</div>
+                                                <div className="peak-label">Peak MW</div>
+                                            </div>
+                                        </div>
 
-                                <div className="ptr-grid">
-                                    {ptrs.map(ptr => {
-                                        const peakAmps = getPeakAmps(ptr.id);
-                                        const status = getStatus(peakAmps, ptr.rated);
+                                        <div className="loading-bar">
+                                            <div className={`loading-fill ${status}`} style={{width: `${loadingPct}%`}}></div>
+                                        </div>
+                                        <div className="loading-text">{loadingPct.toFixed(1)}% Loading ({peakAmps.toFixed(1)}A / {ptr.rated}A)</div>
 
-                                        return (
-                                            <div key={ptr.id} className={`ptr-card ${status}`}>
-                                                <div className="ptr-title">{ptr.name} - {ptr.voltage}</div>
-                                                <div className="readings-grid">
-                                                    {timeSlots.map(time => {
-                                                        const reading = readings[ptr.id]?.[time] || { mw: 0, amps: 0 };
-                                                        const hasData = reading.mw > 0 || reading.amps > 0;
+                                        <div style={{height: '1.5rem'}}></div>
 
-                                                        return (
-                                                            <div key={time} className="reading-block">
-                                                                <div className="reading-time">{time} HRS</div>
-                                                                <div className="reading-value">
-                                                                    <span className="reading-label">MW</span>
-                                                                    <span className="reading-number" style={{color: hasData ? 'var(--accent-success)' : 'var(--text-muted)'}}>
-                                                                        {reading.mw.toFixed(1)}
-                                                                    </span>
+                                        <div className="time-slots">
+                                            {timeSlots.map(time => {
+                                                const reading = readings[ptr.id]?.[time] || { mw: 0, amps: 0 };
+                                                const hasData = reading.mw > 0 || reading.amps > 0;
+
+                                                return (
+                                                    <div key={time} className="time-slot">
+                                                        <div className="time-slot-header">{time} HRS</div>
+                                                        <div className="time-slot-values">
+                                                            <div className="slot-value">
+                                                                <div className={`value-number ${hasData ? 'active' : 'inactive'}`}>
+                                                                    {reading.mw.toFixed(1)}
                                                                 </div>
-                                                                <div className="reading-value">
-                                                                    <span className="reading-label">Amps</span>
-                                                                    <span className="reading-number" style={{color: hasData ? 'var(--accent-success)' : 'var(--text-muted)'}}>
-                                                                        {reading.amps.toFixed(1)}
-                                                                    </span>
-                                                                </div>
+                                                                <div className="value-unit">MW</div>
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
-                    </div>
+                                                            <div className="slot-value">
+                                                                <div className={`value-number ${hasData ? 'active' : 'inactive'}`}>
+                                                                    {reading.amps.toFixed(1)}
+                                                                </div>
+                                                                <div className="value-unit">Amps</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             );
         }
 
-        ReactDOM.render(<Dashboard />, document.getElementById('root'));
+        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
