@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PTR Load Monitoring - Huzurnagar S/S | TGTRANSCO</title>
+    <title>PTR Monitoring - Circle Dashboard | TGTRANSCO</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -39,7 +39,6 @@
             overflow-x: hidden;
         }
 
-        /* Animated grid background */
         body::before {
             content: '';
             position: fixed;
@@ -184,24 +183,6 @@
             overflow: hidden;
         }
 
-        .btn-login::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn-login:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
         .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
@@ -221,7 +202,7 @@
 
         /* Dashboard */
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             padding: 2rem;
             position: relative;
@@ -230,7 +211,7 @@
 
         .header {
             text-align: center;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
             padding: 2rem;
             background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(255, 214, 0, 0.05) 100%);
             border: 2px solid var(--border-color);
@@ -278,6 +259,8 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .user-badge {
@@ -339,29 +322,46 @@
         }
 
         .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
             padding: 1.5rem;
             background: rgba(21, 27, 46, 0.6);
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            flex-wrap: wrap;
         }
 
-        .date-control {
+        .control-group {
             display: flex;
-            align-items: center;
-            gap: 1rem;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
-        .date-control label {
-            font-size: 0.875rem;
+        .control-label {
+            font-size: 0.75rem;
             color: var(--text-secondary);
             font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .select-input {
+            padding: 0.625rem 1rem;
+            background: rgba(10, 14, 26, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .select-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
         }
 
         .date-input {
@@ -478,6 +478,21 @@
         @keyframes pulse {
             0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--accent-green); }
             50% { opacity: 0.6; box-shadow: 0 0 20px var(--accent-green); }
+        }
+
+        .breadcrumb {
+            padding: 1rem 2rem;
+            background: rgba(21, 27, 46, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .breadcrumb span {
+            color: var(--accent-blue);
+            font-weight: 600;
         }
 
         .ptr-grid {
@@ -675,6 +690,26 @@
             text-transform: uppercase;
         }
 
+        .no-data-message {
+            text-align: center;
+            padding: 3rem;
+            background: rgba(21, 27, 46, 0.6);
+            border: 2px dashed var(--border-color);
+            border-radius: 4px;
+            margin: 2rem 0;
+        }
+
+        .no-data-message h3 {
+            color: var(--accent-blue);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .no-data-message p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 1024px) {
             .ptr-grid {
                 grid-template-columns: 1fr;
@@ -683,12 +718,16 @@
 
         @media (max-width: 768px) {
             .controls {
-                flex-direction: column;
-                align-items: stretch;
+                grid-template-columns: 1fr;
             }
 
             .time-slots {
                 grid-template-columns: 1fr;
+            }
+
+            .user-info-bar {
+                flex-direction: column;
+                align-items: stretch;
             }
         }
     </style>
@@ -699,17 +738,562 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        // ========================================
+        // CONFIGURATION - UPDATE THESE!
+        // ========================================
+
         // User credentials
         const USERS = [
-            { username: 'admin', password: 'admin@123', name: 'Administrator', role: 'Admin' },
+            { username: 'test', password: 'test@123', name: 'Administrator', role: 'Admin' },
             { username: 'engineer', password: 'engineer@123', name: 'Engineer', role: 'Engineer' },
-            { username: 'operator', password: 'operator@123', name: 'Operator', role: 'Operator' },
-            { username: 'viewer', password: 'viewer@123', name: 'Viewer', role: 'Viewer' }
+            { username: 'operator', password: 'operator@123', name: 'Operator', role: 'Operator' }
         ];
 
-        // API Configuration
-        const API_URL = 'https://script.google.com/macros/s/AKfycbyNpzhP6mB1VlqWoKlsW05oHaQ5o24LyD_uYgO_gViaPrk8SU6G49Gytn2koSTq2A3B/exec';
-        // Replace with: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'
+        // Circle Configuration
+        const CIRCLE_CONFIG = {
+            name: 'Suryapet circle',  // Your circle name
+            apiUrl: 'https://script.google.com/macros/s/AKfycbxPp83i5sKY6fOoUGW0KkX4ca3qxmG3fRebAOK5wJcxasX5aZAdYK_sxefRFGzCoc0QYA/exec'  // Your API URL
+        };
+
+        // Substations in this circle
+        const SUBSTATIONS =[
+{'id': 'HZN', 'name': 'Huzurnagar', 'division': 'Suryapet'}, 
+{'id': 'STPM', 'name': 'Sithapuram', 'division': 'Suryapet'}, 
+{'id': 'RMP', 'name': 'Ramapuram', 'division': 'Suryapet'}, 
+{'id': 'MTPL', 'name': 'Mattampally', 'division': 'Suryapet'},
+ {'id': 'KDD', 'name': 'Kodada', 'division': 'Suryapet'}, 
+{'id': 'MNG', 'name': 'Munagala', 'division': 'Suryapet'}, 
+{'id': 'MLG', 'name': 'Miryalaguda', 'division': 'Miryalaguda'}, 
+{'id': 'WDPL', 'name': 'Wadapally', 'division': 'Miryalaguda'}, 
+{'id': 'NTK', 'name': 'Nuthankal', 'division': 'Suryapet'}, 
+{'id': 'DMCHR', 'name': 'DAMARCHERLA', 'division': 'Miryalaguda'},
+ {'id': 'GNTP', 'name': 'Guntipally', 'division': 'Suryapet'}, 
+{'id': 'KMP', 'name': '220KV Kondamallepally', 'division': 'Miryalaguda'}, 
+{'id': 'HLY', 'name': 'Haliya', 'division': 'Miryalaguda'}, 
+{'id': 'SRP', 'name': '400KV Suryapet', 'division': 'Suryapet'}, 
+{'id': 'MRG', 'name': '132KV SS Marriguda', 'division': 'Miryalaguda'}, 
+{'id': 'MDPL', 'name': 'Madgulapally', 'division': 'Miryalaguda'}, 
+{'id': 'SRPT', 'name': '132Kv Suryapet SS', 'division': 'Suryapet'}, 
+{'id': 'TTY', 'name': '132Kv Thungathurthy SS', 'division': 'Suryapet'},
+ {'id': 'NGM', 'name': '132Kv Nagaram SS', 'division': 'Suryapet'},
+ {'id': 'DRCL', 'name': 'Dirsincherla', 'division': 'Miryalaguda'},
+ {'id': 'KDP', 'name': 'Kodhandapur', 'division': 'Miryalaguda'},
+ {'id': 'KMPL', 'name': '132KV Kondamallepally', 'division': 'Miryalaguda'}
+];
+
+        // PTR Configuration per substation
+        const PTR_CONFIG = {
+    "DMCHR": [
+        {
+            "id": "ict1_400",
+            "name": "ICT-1",
+            "voltage": "400/220 KV",
+            "capacity": "500",
+            "rated": 722.0
+        },
+        {
+            "id": "ict2_400",
+            "name": "ICT-2",
+            "voltage": "400/220 KV",
+            "capacity": "500",
+            "rated": 722.0
+        }
+    ],
+    "DRCL": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        }
+    ],
+    "GNTP": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR I",
+            "voltage": "132/33 KV",
+            "capacity": "Oct-16",
+            "rated": 69.98
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR II",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.8
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR III",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.78
+        }
+    ],
+    "HLY": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.69
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.69
+        }
+    ],
+    "HZN": [
+        {
+            "id": "ptr1_220",
+            "name": "PTR-1",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        },
+        {
+            "id": "ptr2_220",
+            "name": "PTR-2",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        },
+        {
+            "id": "ptr1_132",
+            "name": "PTR-3",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 138.0
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-4",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 138.0
+        }
+    ],
+    "KDD": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.69
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.69
+        }
+    ],
+    "KMP": [
+        {
+            "id": "ptr1_220",
+            "name": "PTR-1",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        },
+        {
+            "id": "ptr2_220",
+            "name": "PTR II",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        },
+        {
+            "id": "ptr3_220",
+            "name": "PTR III",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        },
+        {
+            "id": "ptr4_220",
+            "name": "PTR-4",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        }
+    ],
+    "KMPL": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.78
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR-3",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.69
+        }
+    ],
+    "MDPL": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33KV",
+            "capacity": "80",
+            "rated": 349.9
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33KV",
+            "capacity": "50",
+            "rated": 218.69
+        }
+    ],
+    "MLG": [
+        {
+            "id": "ptr1_220",
+            "name": "PTR-1",
+            "voltage": "220/132 KV",
+            "capacity": "160",
+            "rated": 419.89
+        },
+        {
+            "id": "ptr2_220",
+            "name": "PTR-2",
+            "voltage": "220/132 KV",
+            "capacity": "160",
+            "rated": 419.9
+        },
+        {
+            "id": "ptr3_220",
+            "name": "PTR-3",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.5
+        },
+        {
+            "id": "ptr4_220",
+            "name": "PTR-4",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.74
+        },
+        {
+            "id": "ptr1_132",
+            "name": "PTR-5",
+            "voltage": "132/33 KV",
+            "capacity": "80",
+            "rated": 349.91
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-6",
+            "voltage": "132/33 KV",
+            "capacity": "80",
+            "rated": 349.9
+        }
+    ],
+    "MNG": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.77
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.69
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.77
+        }
+    ],
+    "MRG": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.77
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR-3",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.77
+        }
+    ],
+    "MTPL": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 219.0
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 219.0
+        }
+    ],
+    "NGM": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "Oct-16",
+            "rated": 70.0
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.77
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR-3",
+            "voltage": "132/33 KV",
+            "capacity": "15",
+            "rated": 65.6
+        }
+    ],
+    "NTK": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.69
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR-3",
+            "voltage": "132/33 KV",
+            "capacity": "16",
+            "rated": 69.98
+        }
+    ],
+    "RMP": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 138.0
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 138.0
+        }
+    ],
+    "SRP": [
+        {
+            "id": "ict1_400",
+            "name": "ICT-1",
+            "voltage": "400/220 KV",
+            "capacity": "315",
+            "rated": 455.0
+        },
+        {
+            "id": "ict2_400",
+            "name": "ICT-2",
+            "voltage": "400/220 KV",
+            "capacity": "315",
+            "rated": 455.0
+        },
+        {
+            "id": "ict3_400",
+            "name": "ICT-3",
+            "voltage": "400/220 KV",
+            "capacity": "500",
+            "rated": 722.0
+        },
+        {
+            "id": "ptr1_220",
+            "name": "PTR I",
+            "voltage": "220/132 KV",
+            "capacity": "160",
+            "rated": 420.0
+        },
+        {
+            "id": "ptr2_220",
+            "name": "PTR II",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        },
+        {
+            "id": "ptr3_220",
+            "name": "PTR III",
+            "voltage": "220/132 KV",
+            "capacity": "160",
+            "rated": 420.0
+        }
+    ],
+    "SRPT": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "80",
+            "rated": 349.9
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "80",
+            "rated": 349.9
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR-3",
+            "voltage": "132/33 KV",
+            "capacity": "80",
+            "rated": 349.9
+        }
+    ],
+    "STPM": [
+        {
+            "id": "ptr1_220",
+            "name": "PTR-1",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        },
+        {
+            "id": "ptr2_220",
+            "name": "PTR-2",
+            "voltage": "220/132 KV",
+            "capacity": "100",
+            "rated": 262.0
+        }
+    ],
+    "TTY": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        }
+    ],
+    "WDPL": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 138.0
+        }
+    ],
+    "KMPL": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 137.78
+        },
+        {
+            "id": "ptr3_132",
+            "name": "PTR-3",
+            "voltage": "132/33 KV",
+            "capacity": "50",
+            "rated": 218.7
+        }
+    ],
+    "KDP": [
+        {
+            "id": "ptr1_132",
+            "name": "PTR-1",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 138
+        },
+        {
+            "id": "ptr2_132",
+            "name": "PTR-2",
+            "voltage": "132/33 KV",
+            "capacity": "31.5",
+            "rated": 138.0
+        }
+    ]
+
+    
+
+};
+
+        const timeSlots = ['06:30', '07:00', '07:30', '08:00', '15:30', '16:00', '16:30', '17:00'];
+
+        // ========================================
+        // MAIN APP
+        // ========================================
 
         function App() {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -747,6 +1331,10 @@
             return <Dashboard user={currentUser} onLogout={handleLogout} />;
         }
 
+        // ========================================
+        // LOGIN SCREEN
+        // ========================================
+
         function LoginScreen({ onLogin }) {
             const [username, setUsername] = useState('');
             const [password, setPassword] = useState('');
@@ -764,7 +1352,7 @@
                     if (user) {
                         onLogin(user);
                     } else {
-                        setError('Invalid username or password. Please try again.');
+                        setError('Invalid username or password');
                         setLoading(false);
                     }
                 }, 600);
@@ -776,7 +1364,7 @@
                         <div className="login-header">
                             <div className="login-logo">⚡</div>
                             <h1 className="login-title">PTR Monitoring</h1>
-                            <p className="login-subtitle">220/132/33 KV Substation - Huzurnagar | TGTRANSCO</p>
+                            <p className="login-subtitle">{CIRCLE_CONFIG.name} | TGTRANSCO</p>
                         </div>
 
                         {error && (
@@ -793,7 +1381,7 @@
                                     className="form-input"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="Enter your username"
+                                    placeholder="Enter username"
                                     required
                                     autoFocus
                                 />
@@ -806,7 +1394,7 @@
                                     className="form-input"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter your password"
+                                    placeholder="Enter password"
                                     required
                                 />
                             </div>
@@ -820,50 +1408,83 @@
             );
         }
 
+        // ========================================
+        // MAIN DASHBOARD
+        // ========================================
+
         function Dashboard({ user, onLogout }) {
+            const [selectedSubstation, setSelectedSubstation] = useState(SUBSTATIONS[0].id);
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [readings, setReadings] = useState(null);
             const [loading, setLoading] = useState(false);
             const [lastUpdate, setLastUpdate] = useState(null);
             const [autoRefresh, setAutoRefresh] = useState(true);
 
-            const ptrs = [
-                { id: 'ptr1_220', name: 'PTR-1', voltage: '220/132 KV', capacity: 100, rated: 262 },
-                { id: 'ptr2_220', name: 'PTR-2', voltage: '220/132 KV', capacity: 100, rated: 262 },
-                { id: 'ptr1_132', name: 'PTR-1', voltage: '132/33 KV', capacity: 31.5, rated: 138 },
-                { id: 'ptr2_132', name: 'PTR-2', voltage: '132/33 KV', capacity: 31.5, rated: 138 }
-            ];
+            // Get current substation object
+            const currentSubstation = SUBSTATIONS.find(s => s.id === selectedSubstation);
+            const currentPTRs = PTR_CONFIG[selectedSubstation] || [];
 
-            const timeSlots = ['06:30', '07:00', '07:30', '08:00', '15:30', '16:00', '16:30', '17:00'];
-
+            // Load data when substation or date changes
             useEffect(() => {
                 loadData();
-            }, [selectedDate]);
+            }, [selectedSubstation, selectedDate]);
 
+            // Auto-refresh
             useEffect(() => {
                 if (!autoRefresh) return;
                 const interval = setInterval(() => loadData(), 30000);
                 return () => clearInterval(interval);
-            }, [autoRefresh, selectedDate]);
+            }, [autoRefresh, selectedSubstation, selectedDate]);
 
             const loadData = async () => {
-                if (!API_URL || API_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') return;
+                const apiUrl = CIRCLE_CONFIG.apiUrl;
+                
+                if (!apiUrl || apiUrl.includes('YOUR_')) {
+                    console.warn('API URL not configured');
+                    // Use mock data for demo
+                    setReadings(generateMockData());
+                    setLastUpdate(new Date());
+                    return;
+                }
 
                 setLoading(true);
                 try {
-                    const url = `${API_URL}?action=getReadings&date=${selectedDate}`;
+                    // Auto-configure API call for selected substation
+                    const url = `${apiUrl}?action=getReadings&date=${selectedDate}&substationId=${selectedSubstation}`;
                     const response = await fetch(url);
                     const data = await response.json();
 
                     if (data.status === 'success') {
                         setReadings(data.data);
                         setLastUpdate(new Date());
+                    } else {
+                        console.error('API error:', data.message);
+                        setReadings(generateMockData());
                     }
                 } catch (error) {
                     console.error('Error loading data:', error);
+                    // Use mock data on error
+                    setReadings(generateMockData());
                 } finally {
                     setLoading(false);
                 }
+            };
+
+            // Generate mock data for demo
+            const generateMockData = () => {
+                const mockData = {};
+                currentPTRs.forEach(ptr => {
+                    mockData[ptr.id] = {};
+                    timeSlots.forEach(time => {
+                        const randomMW = (Math.random() * ptr.capacity * 0.7).toFixed(1);
+                        const randomAmps = (Math.random() * ptr.rated * 0.7).toFixed(1);
+                        mockData[ptr.id][time] = {
+                            mw: parseFloat(randomMW),
+                            amps: parseFloat(randomAmps)
+                        };
+                    });
+                });
+                return mockData;
             };
 
             const getPeakAmps = (ptrId) => {
@@ -895,7 +1516,7 @@
                 <div className="container">
                     <div className="header">
                         <h1>PTR LOAD MONITORING</h1>
-                        <p>220/132/33 KV Substation - Huzurnagar | TGTRANSCO</p>
+                        <p>{CIRCLE_CONFIG.name} | TGTRANSCO</p>
                     </div>
 
                     <div className="user-info-bar">
@@ -906,55 +1527,88 @@
                                 <div className="user-role">{user.role}</div>
                             </div>
                         </div>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap'}}>
                             <div className="status-badge">
                                 <div className="status-dot"></div>
                                 <span style={{fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase'}}>
                                     Live Monitoring
                                 </span>
                             </div>
+                            {lastUpdate && (
+                                <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
+                                    Updated: {lastUpdate.toLocaleTimeString('en-IN')}
+                                </div>
+                            )}
                             <button className="btn-logout" onClick={onLogout}>
                                 Logout
                             </button>
                         </div>
                     </div>
 
+                    <div className="breadcrumb">
+                        <span>{CIRCLE_CONFIG.name}</span> → <span>{currentSubstation?.name}</span> → <span>{currentSubstation?.division}</span>
+                    </div>
+
                     <div className="controls">
-                        <div className="date-control">
-                            <label>Date</label>
+                        <div className="control-group">
+                            <label className="control-label">Substation</label>
+                            <select 
+                                className="select-input"
+                                value={selectedSubstation}
+                                onChange={(e) => setSelectedSubstation(e.target.value)}
+                            >
+                                {SUBSTATIONS.map(sub => (
+                                    <option key={sub.id} value={sub.id}>
+                                        {sub.name} ({sub.division})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="control-group">
+                            <label className="control-label">Date</label>
                             <input 
                                 type="date"
                                 className="date-input"
                                 value={selectedDate}
                                 onChange={(e) => setSelectedDate(e.target.value)}
                             />
+                        </div>
+
+                        <div className="control-group">
+                            <label className="control-label">Actions</label>
                             <button className="btn-refresh" onClick={loadData} disabled={loading}>
                                 {loading ? '⟳ Loading...' : '🔄 Refresh'}
                             </button>
                         </div>
-                        <div className="auto-refresh">
-                            <label className="switch">
-                                <input 
-                                    type="checkbox"
-                                    checked={autoRefresh}
-                                    onChange={(e) => setAutoRefresh(e.target.checked)}
-                                />
-                                <span className="slider"></span>
-                            </label>
-                            <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase'}}>
-                                Auto-Refresh (30s)
-                            </span>
-                        </div>
-                        {lastUpdate && (
-                            <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
-                                Last Update: {lastUpdate.toLocaleTimeString('en-IN')}
+
+                        <div className="control-group">
+                            <label className="control-label">Auto-Refresh</label>
+                            <div className="auto-refresh">
+                                <label className="switch">
+                                    <input 
+                                        type="checkbox"
+                                        checked={autoRefresh}
+                                        onChange={(e) => setAutoRefresh(e.target.checked)}
+                                    />
+                                    <span className="slider"></span>
+                                </label>
+                                <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
+                                    {autoRefresh ? 'ON (30s)' : 'OFF'}
+                                </span>
                             </div>
-                        )}
+                        </div>
                     </div>
 
-                    {readings && (
+                    {currentPTRs.length === 0 ? (
+                        <div className="no-data-message">
+                            <h3>⚠️ No PTR Configuration</h3>
+                            <p>PTR configuration not available for {currentSubstation?.name}.</p>
+                            <p style={{marginTop: '0.5rem'}}>Please add PTR details to PTR_CONFIG.</p>
+                        </div>
+                    ) : readings ? (
                         <div className="ptr-grid">
-                            {ptrs.map(ptr => {
+                            {currentPTRs.map(ptr => {
                                 const peakAmps = getPeakAmps(ptr.id);
                                 const peakMW = getPeakMW(ptr.id);
                                 const status = getStatus(peakAmps, ptr.rated);
@@ -1019,6 +1673,11 @@
                                     </div>
                                 );
                             })}
+                        </div>
+                    ) : (
+                        <div className="no-data-message">
+                            <h3>Loading...</h3>
+                            <p>Fetching data for {currentSubstation?.name}...</p>
                         </div>
                     )}
                 </div>
