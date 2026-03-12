@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PTR Monitoring - Circle Dashboard | TGTRANSCO</title>
+    <title>PTR Monitoring System | TGTRANSCO</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -59,7 +59,6 @@
             50% { opacity: 0.6; }
         }
 
-        /* Login Screen */
         .login-wrapper {
             min-height: 100vh;
             display: flex;
@@ -179,13 +178,16 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
         }
 
         .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
         .alert-error {
@@ -200,7 +202,16 @@
             z-index: 1;
         }
 
-        /* Dashboard */
+        .alert-success {
+            padding: 1rem;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-green);
+            border-radius: 4px;
+            color: var(--accent-green);
+            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+        }
+
         .container {
             max-width: 1800px;
             margin: 0 auto;
@@ -710,9 +721,206 @@
             font-size: 0.9rem;
         }
 
+        /* Data Entry Styles */
+        .entry-container {
+            background: rgba(21, 27, 46, 0.6);
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .entry-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .ptr-entry-grid {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .ptr-entry-card {
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(10, 14, 26, 0.8) 100%);
+            border: 2px solid var(--border-color);
+            border-left: 4px solid var(--accent-blue);
+            border-radius: 4px;
+            padding: 2rem;
+        }
+
+        .ptr-entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ptr-entry-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .ptr-entry-specs {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .slot-entry {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            min-width: 0; /* Prevent overflow */
+        }
+
+        .slot-time {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .slot-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            width: 100%; /* Ensure full width */
+        }
+
+        .slot-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            min-width: 0; /* Prevent overflow */
+        }
+
+        .slot-input-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            white-space: nowrap; /* Prevent label wrapping */
+        }
+
+        .slot-input {
+            width: 100%; /* Full width of container */
+            padding: 0.625rem 0.5rem;
+            background: rgba(10, 14, 26, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            text-align: center;
+            transition: all 0.3s;
+            box-sizing: border-box; /* Include padding in width */
+            min-width: 0; /* Prevent overflow */
+        }
+
+        .slot-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+            background: rgba(10, 14, 26, 0.9);
+        }
+
+        .slot-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        /* Prevent input zoom on mobile */
+        @media screen and (max-width: 768px) {
+            .slot-input {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 1rem 2rem;
+            background: var(--accent-green);
+            border: none;
+            border-radius: 4px;
+            color: var(--primary-dark);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            margin-top: 2rem;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .submit-status {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .submit-status.success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+
+        .submit-status.error {
+            background: rgba(255, 56, 56, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .submit-status.submitting {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
         @media (max-width: 1024px) {
             .ptr-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .slots-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             }
         }
 
@@ -729,6 +937,44 @@
                 flex-direction: column;
                 align-items: stretch;
             }
+
+            .slots-grid {
+                grid-template-columns: 1fr; /* Single column on mobile */
+            }
+
+            .slot-inputs {
+                grid-template-columns: 1fr; /* Stack MW and Amps vertically on small screens */
+                gap: 0.5rem;
+            }
+            
+            .entry-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: stretch;
+            }
+            
+            .slot-entry {
+                padding: 0.875rem; /* Slightly less padding on mobile */
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .ptr-entry-card {
+                padding: 1rem;
+            }
+            
+            .slot-input {
+                padding: 0.75rem 0.5rem;
+                font-size: 16px; /* Prevent zoom on iOS */
+            }
         }
     </style>
 </head>
@@ -742,20 +988,204 @@
         // CONFIGURATION - UPDATE THESE!
         // ========================================
 
-        // User credentials
+        // All users with their credentials and access
         const USERS = [
-            { username: 'test', password: 'test@123', name: 'Administrator', role: 'Admin' },
-            { username: 'engineer', password: 'engineer@123', name: 'Engineer', role: 'Engineer' },
-            { username: 'operator', password: 'operator@123', name: 'Operator', role: 'Operator' }
+            // Admin - Full monitoring access
+            {
+                username: 'admin',
+                password: 'admin@123',
+                name: 'Administrator',
+                role: 'Admin',
+                substationId: null,  // null = can view all substations
+                substationName: 'All Substations'
+            },
+            
+            // Operators - Data entry for specific substations
+            {
+        username: 'srp_op1',
+        password: 'srp@123',
+        name: 'Suryapet Operator',
+        role: 'Operator',
+        substationId: 'SRP',
+        substationName: '400KV Suryapet',
+    },
+    {
+        username: 'dmchr_op1',
+        password: 'dmchr@123',
+        name: 'DAMARCHERLA Operator',
+        role: 'Operator',
+        substationId: 'DMCHR',
+        substationName: '400KV DAMARCHERLA',
+    },
+    {
+        username: 'mlg_op1',
+        password: 'mlg@123',
+        name: 'Miryalaguda Operator',
+        role: 'Operator',
+        substationId: 'MLG',
+        substationName: '220KV Miryalaguda',
+    },
+    {
+        username: 'hzn_op1',
+        password: 'hzn@123',
+        name: 'Huzurnagar Operator',
+        role: 'Operator',
+        substationId: 'HZN',
+        substationName: '220KV Huzurnagar',
+    },
+    {
+        username: 'stpm_op1',
+        password: 'stpm@123',
+        name: 'Sithapuram Operator',
+        role: 'Operator',
+        substationId: 'STPM',
+        substationName: '220KV Sithapuram',
+    },
+    {
+        username: 'rmp_op1',
+        password: 'rmp@123',
+        name: 'Ramapuram Operator',
+        role: 'Operator',
+        substationId: 'RMP',
+        substationName: '132KV Ramapuram',
+    },
+    {
+        username: 'mtpl_op1',
+        password: 'mtpl@123',
+        name: 'Mattampally Operator',
+        role: 'Operator',
+        substationId: 'MTPL',
+        substationName: '132KV Mattampally',
+    },
+    {
+        username: 'kdd_op1',
+        password: 'kdd@123',
+        name: 'Kodada Operator',
+        role: 'Operator',
+        substationId: 'KDD',
+        substationName: '132KV Kodada',
+    },
+    {
+        username: 'mng_op1',
+        password: 'mng@123',
+        name: 'Munagala Operator',
+        role: 'Operator',
+        substationId: 'MNG',
+        substationName: '132KV Munagala',
+    },
+    {
+        username: 'wdpl_op1',
+        password: 'wdpl@123',
+        name: 'Wadapally Operator',
+        role: 'Operator',
+        substationId: 'WDPL',
+        substationName: '132KV Wadapally',
+    },
+    {
+        username: 'ntk_op1',
+        password: 'ntk@123',
+        name: 'Nuthankal Operator',
+        role: 'Operator',
+        substationId: 'NTK',
+        substationName: '132KV Nuthankal',
+    },
+    {
+        username: 'gntp_op1',
+        password: 'gntp@123',
+        name: 'Guntipally Operator',
+        role: 'Operator',
+        substationId: 'GNTP',
+        substationName: '132KV Guntipally',
+    },
+    {
+        username: 'kmp_op1',
+        password: 'kmp@123',
+        name: 'Kondamallepally Operator',
+        role: 'Operator',
+        substationId: 'KMP',
+        substationName: '220KV Kondamallepally',
+    },
+    {
+        username: 'hly_op1',
+        password: 'hly@123',
+        name: 'Haliya Operator',
+        role: 'Operator',
+        substationId: 'HLY',
+        substationName: '132KV Haliya',
+    },
+    {
+        username: 'mrg_op1',
+        password: 'mrg@123',
+        name: 'SS Marriguda Operator',
+        role: 'Operator',
+        substationId: 'MRG',
+        substationName: '132KV SS Marriguda',
+    },
+    {
+        username: 'mdpl_op1',
+        password: 'mdpl@123',
+        name: 'Madgulapally Operator',
+        role: 'Operator',
+        substationId: 'MDPL',
+        substationName: '132KV Madgulapally',
+    },
+    {
+        username: 'srpt_op1',
+        password: 'srpt@123',
+        name: 'Suryapet SS Operator',
+        role: 'Operator',
+        substationId: 'SRPT',
+        substationName: '132Kv Suryapet SS',
+    },
+    {
+        username: 'tty_op1',
+        password: 'tty@123',
+        name: 'Thungathurthy SS Operator',
+        role: 'Operator',
+        substationId: 'TTY',
+        substationName: '132Kv Thungathurthy SS',
+    },
+    {
+        username: 'ngm_op1',
+        password: 'ngm@123',
+        name: 'Nagaram SS Operator',
+        role: 'Operator',
+        substationId: 'NGM',
+        substationName: '132Kv Nagaram SS',
+    },
+    {
+        username: 'drcl_op1',
+        password: 'drcl@123',
+        name: 'Dirsincherla Operator',
+        role: 'Operator',
+        substationId: 'DRCL',
+        substationName: '132KV Dirsincherla',
+    },
+    {
+        username: 'kdp_op1',
+        password: 'kdp@123',
+        name: 'Kodhandapur Operator',
+        role: 'Operator',
+        substationId: 'KDP',
+        substationName: '132KV Kodhandapur',
+    },
+    {
+        username: 'kmpl_op1',
+        password: 'kmpl@123',
+        name: 'Kondamallepally Operator',
+        role: 'Operator',
+        substationId: 'KMPL',
+        substationName: '132KV Kondamallepally',
+    }
         ];
 
         // Circle Configuration
         const CIRCLE_CONFIG = {
-            name: 'Suryapet circle',  // Your circle name
-            apiUrl: 'https://script.google.com/macros/s/AKfycbwEkgcj1ntevbFrG9c9CJeGjzB1hhk3N1lbP73tR6Y7tONMVW4Cs5fYr9dyYUOlb4tA7A/exec'  // Your API URL
+            name: 'Suryapet',
+            apiUrl: 'https://script.google.com/macros/s/AKfycbwngdQjNFb-ao1xh498bXmbsfjh9ZJCUZOMsA7DhWJ8OLgLBJyeF_gfPrQ-On8Y2c3R7A/exec'
         };
 
-        // Substations in this circle
+        // Substations
         const SUBSTATIONS =[
 {'id': 'SRP', 'name': '400KV Suryapet', 'division': 'Suryapet'},
 {'id': 'DMCHR', 'name': '400KV DAMARCHERLA', 'division': 'Miryalaguda'},
@@ -1328,7 +1758,12 @@
                 return <LoginScreen onLogin={handleLogin} />;
             }
 
-            return <Dashboard user={currentUser} onLogout={handleLogout} />;
+            // Route based on role
+            if (currentUser.role === 'Admin') {
+                return <MonitoringDashboard user={currentUser} onLogout={handleLogout} />;
+            } else {
+                return <DataEntryDashboard user={currentUser} onLogout={handleLogout} />;
+            }
         }
 
         // ========================================
@@ -1409,10 +1844,10 @@
         }
 
         // ========================================
-        // MAIN DASHBOARD
+        // MONITORING DASHBOARD (Admin Only)
         // ========================================
 
-        function Dashboard({ user, onLogout }) {
+        function MonitoringDashboard({ user, onLogout }) {
             const [selectedSubstation, setSelectedSubstation] = useState(SUBSTATIONS[0].id);
             const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
             const [readings, setReadings] = useState(null);
@@ -1420,16 +1855,13 @@
             const [lastUpdate, setLastUpdate] = useState(null);
             const [autoRefresh, setAutoRefresh] = useState(true);
 
-            // Get current substation object
             const currentSubstation = SUBSTATIONS.find(s => s.id === selectedSubstation);
             const currentPTRs = PTR_CONFIG[selectedSubstation] || [];
 
-            // Load data when substation or date changes
             useEffect(() => {
                 loadData();
             }, [selectedSubstation, selectedDate]);
 
-            // Auto-refresh
             useEffect(() => {
                 if (!autoRefresh) return;
                 const interval = setInterval(() => loadData(), 30000);
@@ -1440,8 +1872,6 @@
                 const apiUrl = CIRCLE_CONFIG.apiUrl;
                 
                 if (!apiUrl || apiUrl.includes('YOUR_')) {
-                    console.warn('API URL not configured');
-                    // Use mock data for demo
                     setReadings(generateMockData());
                     setLastUpdate(new Date());
                     return;
@@ -1449,7 +1879,6 @@
 
                 setLoading(true);
                 try {
-                    // Auto-configure API call for selected substation
                     const url = `${apiUrl}?action=getReadings&date=${selectedDate}&substationId=${selectedSubstation}`;
                     const response = await fetch(url);
                     const data = await response.json();
@@ -1458,19 +1887,15 @@
                         setReadings(data.data);
                         setLastUpdate(new Date());
                     } else {
-                        console.error('API error:', data.message);
                         setReadings(generateMockData());
                     }
                 } catch (error) {
-                    console.error('Error loading data:', error);
-                    // Use mock data on error
                     setReadings(generateMockData());
                 } finally {
                     setLoading(false);
                 }
             };
 
-            // Generate mock data for demo
             const generateMockData = () => {
                 const mockData = {};
                 currentPTRs.forEach(ptr => {
@@ -1604,7 +2029,6 @@
                         <div className="no-data-message">
                             <h3>⚠️ No PTR Configuration</h3>
                             <p>PTR configuration not available for {currentSubstation?.name}.</p>
-                            <p style={{marginTop: '0.5rem'}}>Please add PTR details to PTR_CONFIG.</p>
                         </div>
                     ) : readings ? (
                         <div className="ptr-grid">
@@ -1680,6 +2104,274 @@
                             <p>Fetching data for {currentSubstation?.name}...</p>
                         </div>
                     )}
+                </div>
+            );
+        }
+
+        // ========================================
+        // DATA ENTRY DASHBOARD (Operator Only)
+        // ========================================
+
+        function DataEntryDashboard({ user, onLogout }) {
+            const [entryDate, setEntryDate] = useState(new Date().toISOString().split('T')[0]);
+            const [formData, setFormData] = useState({});
+            const [submitting, setSubmitting] = useState(false);
+            const [submitStatus, setSubmitStatus] = useState(null);
+
+            const substationId = user.substationId;
+            const ptrs = PTR_CONFIG[substationId] || [];
+
+            useEffect(() => {
+                const initialData = {};
+                ptrs.forEach(ptr => {
+                    initialData[ptr.id] = {};
+                    timeSlots.forEach(time => {
+                        initialData[ptr.id][time] = { mw: '', amps: '' };
+                    });
+                });
+                setFormData(initialData);
+            }, [substationId]);
+
+            const handleInputChange = (ptrId, time, field, value) => {
+                setFormData(prev => ({
+                    ...prev,
+                    [ptrId]: {
+                        ...prev[ptrId],
+                        [time]: {
+                            ...prev[ptrId][time],
+                            [field]: value
+                        }
+                    }
+                }));
+            };
+
+            const handleSubmit = async () => {
+                setSubmitting(true);
+                setSubmitStatus({ type: 'submitting', message: 'Submitting data...' });
+
+                const apiUrl = CIRCLE_CONFIG.apiUrl;
+
+                // Collect all readings
+                const readings = [];
+                ptrs.forEach(ptr => {
+                    timeSlots.forEach(time => {
+                        const data = formData[ptr.id]?.[time];
+                        if (data && (data.mw || data.amps)) {
+                            readings.push({
+                                substationId: substationId,
+                                date: entryDate,
+                                time: time,
+                                ptrId: ptr.id,
+                                ptrName: `${ptr.name} (${ptr.voltage})`,
+                                mw: parseFloat(data.mw) || 0,
+                                amps: parseFloat(data.amps) || 0,
+                                user: user.name,
+                                source: 'Data Entry Form'
+                            });
+                        }
+                    });
+                });
+
+                if (readings.length === 0) {
+                    setSubmitStatus({ type: 'error', message: 'No data to submit. Please enter at least one reading.' });
+                    setSubmitting(false);
+                    return;
+                }
+
+                console.log(`Submitting ${readings.length} readings...`);
+
+                let successCount = 0;
+                let errorCount = 0;
+                const errors = [];
+
+                // Submit each reading one by one
+                for (const reading of readings) {
+                    try {
+                        // Create form data for Google Apps Script
+                        const formData = new FormData();
+                        formData.append('action', 'saveReading');
+                        formData.append('substationId', reading.substationId);
+                        formData.append('date', reading.date);
+                        formData.append('time', reading.time);
+                        formData.append('ptrId', reading.ptrId);
+                        formData.append('ptrName', reading.ptrName);
+                        formData.append('mw', reading.mw);
+                        formData.append('amps', reading.amps);
+                        formData.append('user', reading.user);
+                        formData.append('source', reading.source);
+
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            body: formData,
+                            redirect: 'follow'
+                        });
+
+                        const text = await response.text();
+                        console.log('Response:', text);
+
+                        try {
+                            const result = JSON.parse(text);
+                            if (result.status === 'success') {
+                                successCount++;
+                                console.log(`✓ Saved: ${reading.ptrId} @ ${reading.time}`);
+                            } else {
+                                errorCount++;
+                                errors.push(`${reading.ptrId} @ ${reading.time}: ${result.message}`);
+                                console.error(`✗ Failed: ${reading.ptrId} @ ${reading.time}`, result.message);
+                            }
+                        } catch (parseError) {
+                            // Response might be HTML redirect
+                            if (text.includes('success') || text.includes('Successfully')) {
+                                successCount++;
+                                console.log(`✓ Saved: ${reading.ptrId} @ ${reading.time}`);
+                            } else {
+                                errorCount++;
+                                errors.push(`${reading.ptrId} @ ${reading.time}: Parse error`);
+                                console.error(`✗ Parse error for: ${reading.ptrId} @ ${reading.time}`);
+                            }
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        errors.push(`${reading.ptrId} @ ${reading.time}: ${error.message}`);
+                        console.error(`✗ Network error for: ${reading.ptrId} @ ${reading.time}`, error);
+                    }
+                }
+
+                // Show results
+                console.log(`Submission complete: ${successCount} success, ${errorCount} errors`);
+
+                if (errorCount === 0) {
+                    setSubmitStatus({
+                        type: 'success',
+                        message: `✅ Successfully submitted ${successCount} readings for ${entryDate}!`
+                    });
+                    
+                    // Clear form on success
+                    const clearedData = {};
+                    ptrs.forEach(ptr => {
+                        clearedData[ptr.id] = {};
+                        timeSlots.forEach(time => {
+                            clearedData[ptr.id][time] = { mw: '', amps: '' };
+                        });
+                    });
+                    setFormData(clearedData);
+                } else if (successCount > 0) {
+                    setSubmitStatus({
+                        type: 'error',
+                        message: `⚠️ Submitted ${successCount} readings successfully, but ${errorCount} failed. Check console for details.`
+                    });
+                    console.error('Errors:', errors);
+                } else {
+                    setSubmitStatus({
+                        type: 'error',
+                        message: `❌ All submissions failed. Please check your API configuration and try again.`
+                    });
+                    console.error('Errors:', errors);
+                }
+
+                setSubmitting(false);
+                setTimeout(() => setSubmitStatus(null), 8000);
+            };
+
+            const getUserInitials = (name) => {
+                return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            };
+
+            return (
+                <div className="container">
+                    <div className="header">
+                        <h1>PTR DATA ENTRY</h1>
+                        <p>{CIRCLE_CONFIG.name} | TGTRANSCO</p>
+                    </div>
+
+                    <div className="user-info-bar">
+                        <div className="user-badge">
+                            <div className="user-avatar">{getUserInitials(user.name)}</div>
+                            <div className="user-details">
+                                <div className="user-name">{user.name}</div>
+                                <div className="user-role">{user.role} - {user.substationName}</div>
+                            </div>
+                        </div>
+                        <button className="btn-logout" onClick={onLogout}>
+                            Logout
+                        </button>
+                    </div>
+
+                    <div className="entry-container">
+                        <div className="entry-header">
+                            <div className="entry-title">📝 {SUBSTATIONS.find(s => s.id === substationId)?.name}</div>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+                                <label style={{fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase'}}>
+                                    Entry Date:
+                                </label>
+                                <input
+                                    type="date"
+                                    className="date-input"
+                                    value={entryDate}
+                                    onChange={(e) => setEntryDate(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="ptr-entry-grid">
+                            {ptrs.map(ptr => (
+                                <div key={ptr.id} className="ptr-entry-card">
+                                    <div className="ptr-entry-header">
+                                        <div>
+                                            <div className="ptr-entry-title">{ptr.name}</div>
+                                            <div className="ptr-entry-specs">{ptr.voltage} | {ptr.capacity} MVA | Rated: {ptr.rated}A</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="slots-grid">
+                                        {timeSlots.map(time => (
+                                            <div key={time} className="slot-entry">
+                                                <div className="slot-time">⏰ {time} HRS</div>
+                                                <div className="slot-inputs">
+                                                    <div className="slot-input-group">
+                                                        <label className="slot-input-label">Load (MW)</label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.1"
+                                                            className="slot-input"
+                                                            placeholder="0.0"
+                                                            value={formData[ptr.id]?.[time]?.mw || ''}
+                                                            onChange={(e) => handleInputChange(ptr.id, time, 'mw', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <div className="slot-input-group">
+                                                        <label className="slot-input-label">HV Amps</label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.1"
+                                                            className="slot-input"
+                                                            placeholder="0.0"
+                                                            value={formData[ptr.id]?.[time]?.amps || ''}
+                                                            onChange={(e) => handleInputChange(ptr.id, time, 'amps', e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button 
+                            className="btn-submit" 
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                        >
+                            {submitting ? '⏳ Submitting...' : '✅ Submit All Data'}
+                        </button>
+
+                        {submitStatus && (
+                            <div className={`submit-status ${submitStatus.type}`}>
+                                {submitStatus.message}
+                            </div>
+                        )}
+                    </div>
                 </div>
             );
         }
